@@ -27,12 +27,6 @@ OPTIONAL_TIME_KEYS = [JOB_CREATED_AT_KEY, JOB_STARTED_AT_KEY, JOB_STOPPED_AT_KEY
 
 SQL_LOCATION = "sql"
 
-MANIFEST_COMPARISON_CUT_OFF_DATE_START = "1983-11-15T09:09:55.000"
-MANIFEST_COMPARISON_CUT_OFF_DATE_END = "2099-11-15T09:09:55.000"
-MANIFEST_COMPARISON_MARGIN_OF_ERROR_MINUTES = "2"
-MANIFEST_COMPARISON_SNAPSHOT_TYPE = "full"
-MANIFEST_COMPARISON_IMPORT_TYPE = "historic"
-
 def setup_logging(logger_level):
     """Set the default logger with json output."""
     the_logger = logging.getLogger()
@@ -98,27 +92,48 @@ def get_parameters():
         dependencies = os.environ["JOB_QUEUE_DEPENDENCIES"].split(",")
         _args.job_queue_dependencies = dependencies
 
-    # TODO: Fix these arg names
-    if "manifest_s3_output_location_templates" in os.environ:
-        _args.athena_s3_output_location = os.environ["manifest_s3_output_location_templates"]
+    if "ATHENA_S3_OUTPUT_LOCATION" in os.environ:
+        _args.athena_s3_output_location = os.environ["ATHENA_S3_OUTPUT_LOCATION"]
 
-    if "manifest_missing_imports_table_name" in os.environ:
-        _args.manifest_missing_imports_table_name = os.environ["manifest_missing_imports_table_name"]
+    if "MISSING_IMPORTS_TABLE_NAME" in os.environ:
+        _args.missing_imports_table_name = os.environ["MISSING_IMPORTS_TABLE_NAME"]
 
-    if "manifest_missing_exports_table_name" in os.environ:
-        _args.manifest_missing_exports_table_name = os.environ["manifest_missing_exports_table_name"]
+    if "MISSING_EXPORTS_TABLE_NAME" in os.environ:
+        _args.missing_exports_table_name = os.environ["MISSING_EXPORTS_TABLE_NAME"]
 
-    if "manifest_counts_table_name" in os.environ:
-        _args.manifest_counts_table_name = os.environ["manifest_counts_table_name"]
+    if "COUNTS_TABLE_NAME" in os.environ:
+        _args.counts_table_name = os.environ["COUNTS_TABLE_NAME"]
 
-    if "manifest_mismatched_timestamps_table_name" in os.environ:
-        _args.manifest_mismatched_timestamps_table_name = os.environ["manifest_mismatched_timestamps_table_name"]
+    if "MISMATCHED_TIMESTAMPS_TABLE_NAME" in os.environ:
+        _args.mismatched_timestamps_table_name = os.environ["MISMATCHED_TIMESTAMPS_TABLE_NAME"]
 
-    if "manifest_etl_glue_job_name" in os.environ:
-        _args.manifest_etl_glue_job_name = os.environ["manifest_etl_glue_job_name"]
+    if "ETL_GLUE_JOB_NAME" in os.environ:
+        _args.etl_glue_job_name = os.environ["ETL_GLUE_JOB_NAME"]
 
     if "MANIFEST_S3_INPUT_LOCATION_IMPORT_HISTORIC" in os.environ:
         _args.manifest_s3_input_location_import_historic = os.environ["MANIFEST_S3_INPUT_LOCATION_IMPORT_HISTORIC"]
+
+    if "MANIFEST_COMPARISON_CUT_OFF_DATE_START" in os.environ:
+        _args.manifest_comparison_cut_off_date_start = os.environ["MANIFEST_COMPARISON_CUT_OFF_DATE_START"]
+    else:
+        _args.manifest_comparison_cut_off_date_start = "1983-11-15T09:09:55.000"
+
+    if "MANIFEST_COMPARISON_CUT_OFF_DATE_END" in os.environ:
+        _args.manifest_comparison_cut_off_date_end = os.environ["MANIFEST_COMPARISON_CUT_OFF_DATE_END"]
+    else:
+        _args.manifest_comparison_cut_off_date_end = "2099-11-15T09:09:55.000"
+
+    if "MANIFEST_COMPARISON_MARGIN_OF_ERROR_MINUTES" in os.environ:
+        _args.manifest_comparison_margin_of_error_minutes = os.environ["MANIFEST_COMPARISON_MARGIN_OF_ERROR_MINUTES"]
+    else:
+        _args.manifest_comparison_margin_of_error_minutes = "2"
+
+    if "MANIFEST_COMPARISON_SNAPSHOT_TYPE" in os.environ:
+        _args.manifest_comparison_snapshot_type = os.environ["MANIFEST_COMPARISON_SNAPSHOT_TYPE"]
+
+    if "MANIFEST_COMPARISON_IMPORT_TYPE" in os.environ:
+        _args.manifest_comparison_import_type = os.environ["MANIFEST_COMPARISON_IMPORT_TYPE"]
+
     return _args
 
 
@@ -163,7 +178,7 @@ def get_and_validate_job_details(event, sns_topic_arn):
     return detail_dict
 
 
-def generate_milliseconds_epoch_from_timestamp(
+def generate_ms_epoch_from_timestamp(
         formatted_timestamp_string, minutes_to_add=0
 ):
     """Returns the 1970 epoch as a number from the given timestamp.
@@ -219,22 +234,22 @@ def fetch_table_creation_sql_files(file_path):
 
     tables = [
         [
-            args.manifest_missing_imports_table_name,
+            args.missing_imports_table_name,
             base_create_missing_import_query,
             args.manifest_s3_input_parquet_location_missing_import,
         ],
         [
-            args.manifest_missing_exports_table_name,
+            args.missing_exports_table_name,
             base_create_missing_export_query,
             args.manifest_s3_input_parquet_location_missing_export,
         ],
         [
-            args.manifest_counts_table_name,
+            args.counts_table_name,
             base_create_count_query,
             args.manifest_s3_input_parquet_location_counts,
         ],
         [
-            args.manifest_mismatched_timestamps_table_name,
+            args.mismatched_timestamps_table_name,
             base_create_parquet_query,
             args.manifest_s3_input_parquet_location_mismatched_timestamps,
         ],
@@ -433,12 +448,12 @@ def handler(event, context):
     recreate_sql_tables(tables, base_drop_query, get_athena_client())
 
     execute_manifest_glue_job(
-        args.manifest_etl_glue_job_name,
-        generate_milliseconds_epoch_from_timestamp(MANIFEST_COMPARISON_CUT_OFF_DATE_START),
-        generate_milliseconds_epoch_from_timestamp(MANIFEST_COMPARISON_CUT_OFF_DATE_END),
-        MANIFEST_COMPARISON_MARGIN_OF_ERROR_MINUTES,
-        MANIFEST_COMPARISON_SNAPSHOT_TYPE,
-        MANIFEST_COMPARISON_IMPORT_TYPE,
+        args.etl_glue_job_name,
+        generate_ms_epoch_from_timestamp(args.manifest_comparison_cut_off_date_start),
+        generate_ms_epoch_from_timestamp(args.manifest_comparison_cut_off_date_end),
+        args.manifest_comparison_margin_of_error_minutes,
+        args.manifest_comparison_snapshot_type,
+        args.manifest_comparison_import_type,
         args.manifest_s3_input_location_import_historic,
         get_glue_client())
 

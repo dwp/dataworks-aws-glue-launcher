@@ -14,3 +14,6 @@ bootstrap: ## Bootstrap local environment for first use
 git-hooks: ## Set up hooks in .githooks
 	@git submodule update --init .githooks ; \
 	git config core.hooksPath .githooks \
+
+unittest:
+    tox

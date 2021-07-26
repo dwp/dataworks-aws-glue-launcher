@@ -1,5 +1,6 @@
 import logging
 import os
+import sys
 import argparse
 import json
 
@@ -146,13 +147,11 @@ def get_escaped_json_string(json_string):
     return escaped_string
 
 
-def get_and_validate_job_details(event, sns_topic_arn):
+def get_and_validate_job_details(message):
     """Get the job name from the event.
     Arguments:
         event (dict): The event
-        sns_topic_arn (string): SNS topic arn for logging
     """
-    message = json.loads(event["Records"][0]["Sns"]["Message"])
 
     dumped_message = get_escaped_json_string(message)
     logger.info(
@@ -205,7 +204,7 @@ def get_glue_client():
     return boto3.service("glue")
 
 
-def check_operational_batch_tasks_job_queue(job_queue, batch_client):
+def check_running_batch_tasks(job_queue, batch_client):
     """Check the AWS Batch job queue, return count of tasks in each status"""
 
     operational_tasks = 0
@@ -260,7 +259,8 @@ def fetch_table_creation_sql_files(file_path):
 
 def fetch_table_drop_sql_file(file_path):
     with open(os.path.join(file_path, "drop-table.sql"), "r") as f:
-        return base_drop_query = f.read()
+        base_drop_query = f.read()
+        return base_drop_query
 
 
 def poll_athena_query_status(id):
@@ -412,8 +412,7 @@ def handler(event, context):
     logger.info(f'Event", "event": {dumped_event}, "mode": "handler')
 
     detail_dict = get_and_validate_job_details(
-        event,
-        args.sns_topic,
+        event
     )
 
     job_name = detail_dict[JOB_NAME_KEY]
@@ -431,7 +430,7 @@ def handler(event, context):
 
     operational_tasks = 0
     for dependency in args.job_queue_dependencies:
-        queue_tasks = check_operational_batch_tasks_job_queue(dependency, batch_client)
+        queue_tasks = check_running_batch_tasks(dependency, batch_client)
         operational_tasks += queue_tasks
 
     if operational_tasks > 0:

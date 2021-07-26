@@ -6,6 +6,33 @@ import json
 logger = None
 args = None
 
+FAILED_JOB_STATUS = "FAILED"
+PENDING_JOB_STATUS = "PENDING"
+RUNNABLE_JOB_STATUS = "RUNNABLE"
+STARTING_JOB_STATUS = "STARTING"
+SUCCEEDED_JOB_STATUS = "SUCCEEDED"
+
+OPERATIONAL_JOB_STATUSES = [PENDING_JOB_STATUS, RUNNABLE_JOB_STATUS, STARTING_JOB_STATUS]
+IGNORED_JOB_STATUSES = [PENDING_JOB_STATUS, RUNNABLE_JOB_STATUS, STARTING_JOB_STATUS]
+
+JOB_NAME_KEY = "jobName"
+JOB_STATUS_KEY = "status"
+JOB_QUEUE_KEY = "jobQueue"
+JOB_STATUS_REASON_KEY = "statusReason"
+
+JOB_CREATED_AT_KEY = ("createdAt", "Created at")
+JOB_STARTED_AT_KEY = ("startedAt", "Started at")
+JOB_STOPPED_AT_KEY = ("stoppedAt", "Stopped at")
+OPTIONAL_TIME_KEYS = [JOB_CREATED_AT_KEY, JOB_STARTED_AT_KEY, JOB_STOPPED_AT_KEY]
+
+SQL_LOCATION = "sql"
+
+MANIFEST_COMPARISON_CUT_OFF_DATE_START = "1983-11-15T09:09:55.000"
+MANIFEST_COMPARISON_CUT_OFF_DATE_END = "2099-11-15T09:09:55.000"
+MANIFEST_COMPARISON_MARGIN_OF_ERROR_MINUTES = "2"
+MANIFEST_COMPARISON_SNAPSHOT_TYPE = "full"
+MANIFEST_COMPARISON_IMPORT_TYPE = "historic"
+
 def setup_logging(logger_level):
     """Set the default logger with json output."""
     the_logger = logging.getLogger()
@@ -33,6 +60,7 @@ def setup_logging(logger_level):
         the_logger.debug(f'Using boto3", "version": "{boto3.__version__}')
 
     return the_logger
+
 
 def get_parameters():
     """Parse the supplied command line arguments.
@@ -66,7 +94,33 @@ def get_parameters():
     if "LOG_LEVEL" in os.environ:
         _args.log_level = os.environ["LOG_LEVEL"]
 
+    if "JOB_QUEUE_DEPENDENCIES" in os.environ:
+        dependencies = os.environ["JOB_QUEUE_DEPENDENCIES"].split(",")
+        _args.job_queue_dependencies = dependencies
+
+    # TODO: Fix these arg names
+    if "manifest_s3_output_location_templates" in os.environ:
+        _args.athena_s3_output_location = os.environ["manifest_s3_output_location_templates"]
+
+    if "manifest_missing_imports_table_name" in os.environ:
+        _args.manifest_missing_imports_table_name = os.environ["manifest_missing_imports_table_name"]
+
+    if "manifest_missing_exports_table_name" in os.environ:
+        _args.manifest_missing_exports_table_name = os.environ["manifest_missing_exports_table_name"]
+
+    if "manifest_counts_table_name" in os.environ:
+        _args.manifest_counts_table_name = os.environ["manifest_counts_table_name"]
+
+    if "manifest_mismatched_timestamps_table_name" in os.environ:
+        _args.manifest_mismatched_timestamps_table_name = os.environ["manifest_mismatched_timestamps_table_name"]
+
+    if "manifest_etl_glue_job_name" in os.environ:
+        _args.manifest_etl_glue_job_name = os.environ["manifest_etl_glue_job_name"]
+
+    if "MANIFEST_S3_INPUT_LOCATION_IMPORT_HISTORIC" in os.environ:
+        _args.manifest_s3_input_location_import_historic = os.environ["MANIFEST_S3_INPUT_LOCATION_IMPORT_HISTORIC"]
     return _args
+
 
 def get_escaped_json_string(json_string):
     try:
@@ -75,6 +129,257 @@ def get_escaped_json_string(json_string):
         escaped_string = json.dumps(json_string)
 
     return escaped_string
+
+
+def get_and_validate_job_details(event, sns_topic_arn):
+    """Get the job name from the event.
+    Arguments:
+        event (dict): The event
+        sns_topic_arn (string): SNS topic arn for logging
+    """
+    message = json.loads(event["Records"][0]["Sns"]["Message"])
+
+    dumped_message = get_escaped_json_string(message)
+    logger.info(
+        f'Validating message", "message_details": {dumped_message}'
+    )
+
+    if "detail" not in message:
+        raise KeyError("Message contains no 'detail' key")
+
+    detail_dict = message["detail"]
+    required_keys = [JOB_NAME_KEY, JOB_STATUS_KEY, JOB_QUEUE_KEY]
+
+    for required_key in required_keys:
+        if required_key not in detail_dict:
+            error_string = f"Details dict contains no '{required_key}' key"
+            raise KeyError(error_string)
+
+    logger.info(
+        f'Message has been validated", "message_details": {dumped_message}, "job_queue": "{detail_dict[JOB_QUEUE_KEY]}", '
+        + f'"job_name": "{detail_dict[JOB_NAME_KEY]}", "job_status": "{detail_dict[JOB_STATUS_KEY]}'
+    )
+
+    return detail_dict
+
+
+def generate_milliseconds_epoch_from_timestamp(
+        formatted_timestamp_string, minutes_to_add=0
+):
+    """Returns the 1970 epoch as a number from the given timestamp.
+
+    Keyword arguments:
+    timestamp_string -- the timestamp as a string formatted to %Y-%m-%dT%H:%M:%S.%f%z
+    minutes_to_add -- if any minutes are to be added to the time, set to greater than 0
+    """
+    timestamp = datetime.strptime(formatted_timestamp_string, "%Y-%m-%dT%H:%M:%S.%f")
+    if minutes_to_add > 0:
+        timestamp = timestamp + timedelta(minutes=minutes_to_add)
+
+    return int((timestamp - datetime(1970, 1, 1)).total_seconds() * 1000.0)
+
+
+def get_batch_client():
+    return boto3.client("batch")
+
+
+def get_athena_client():
+    return boto3.client("athena")
+
+def get_glue_client():
+    return boto3.service("glue")
+
+
+def check_operational_batch_tasks_job_queue(job_queue, batch_client):
+    """Check the AWS Batch job queue, return count of tasks in each status"""
+
+    operational_tasks = 0
+
+    for status in OPERATIONAL_JOB_STATUSES:
+        response = batch_client.list_jobs(
+            jobQueue=job_queue,
+            jobStatus=status,
+        )
+        operational_tasks += len(response["jobSummaryList"])
+    return operational_tasks
+
+
+def fetch_table_creation_sql_files(file_path):
+    with open(os.path.join(file_path, "create-parquet-table.sql"), "r") as f:
+        base_create_parquet_query = f.read()
+
+    with open(os.path.join(file_path, "create-missing-import-table.sql"), "r",) as f:
+        base_create_missing_import_query = f.read()
+
+    with open(os.path.join(file_path, "create-missing-export-table.sql"), "r",) as f:
+        base_create_missing_export_query = f.read()
+
+    with open(os.path.join(file_path, "create-count-table.sql"), "r") as f:
+        base_create_count_query = f.read()
+
+    tables = [
+        [
+            args.manifest_missing_imports_table_name,
+            base_create_missing_import_query,
+            args.manifest_s3_input_parquet_location_missing_import,
+        ],
+        [
+            args.manifest_missing_exports_table_name,
+            base_create_missing_export_query,
+            args.manifest_s3_input_parquet_location_missing_export,
+        ],
+        [
+            args.manifest_counts_table_name,
+            base_create_count_query,
+            args.manifest_s3_input_parquet_location_counts,
+        ],
+        [
+            args.manifest_mismatched_timestamps_table_name,
+            base_create_parquet_query,
+            args.manifest_s3_input_parquet_location_mismatched_timestamps,
+        ],
+    ]
+
+    return tables
+
+
+def fetch_table_drop_sql_file(file_path):
+    with open(os.path.join(file_path, "drop-table.sql"), "r") as f:
+        return base_drop_query = f.read()
+
+
+def poll_athena_query_status(id):
+    """Polls athena for the status of a query.
+
+    Keyword arguments:
+    id -- the id of the query in athena
+    """
+    athena_client = get_client(service_name="athena")
+    time_taken = 1
+    while True:
+        query_execution_resp = athena_client.get_query_execution(QueryExecutionId=id)
+
+        state = query_execution_resp["QueryExecution"]["Status"]["State"]
+        if state in ("SUCCEEDED", "FAILED", "CANCELLED"):
+            console_printer.print_info(
+                f"Athena query execution finished in {str(time_taken)} seconds with status of '{state}'"
+            )
+            return state
+
+        time.sleep(1)
+        time_taken += 1
+
+
+def execute_athena_query(output_location, query, athena_client):
+    """Executes the given individual query against athena and return the result.
+
+    Keyword arguments:
+    output_location -- the s3 location to output the results of the execution to
+    query -- the query to execute
+    """
+    logger.info(
+        f"Executing query and sending output results to '{output_location}'"
+    )
+
+    query_start_resp = athena_client.start_query_execution(
+        QueryString=query, ResultConfiguration={"OutputLocation": output_location}
+    )
+    execution_state = poll_athena_query_status(query_start_resp["QueryExecutionId"])
+
+    if execution_state != "SUCCEEDED":
+        raise KeyError(
+            f"Athena query execution failed with final execution status of '{execution_state}'"
+        )
+
+    return athena_client.get_query_results(
+        QueryExecutionId=query_start_resp["QueryExecutionId"]
+    )
+
+
+def recreate_sql_tables(tables, drop_query, athena_client):
+    for table_details in tables:
+        logger.info(
+            f"Dropping table named '{table_details[0]}' if exists"
+        )
+    drop_query = base_drop_query.replace("[table_name]", table_details[0])
+    execute_athena_query(
+        args.manifest_s3_output_location_templates, drop_query, athena_client
+    )
+
+    logger.info(
+        f"Generating table named '{table_details[0]}' from S3 location of '{table_details[2]}'"
+    )
+
+    s3_location = (
+        table_details[2]
+        if table_details[2].endswith("/")
+        else f"{table_details[2]}/"
+    )
+
+    create_query = table_details[1].replace("[table_name]", table_details[0])
+    create_query = create_query.replace("[s3_input_location]", s3_location)
+
+    execute_athena_query(
+        args.manifest_s3_output_location_templates, create_query, athena_client
+    )
+
+
+def execute_manifest_glue_job(
+        job_name,
+        cut_off_time_start,
+        cut_off_time_end,
+        margin_of_error,
+        snapshot_type,
+        import_type,
+        import_prefix,
+        export_prefix,
+        glue_client
+):
+    """Executes the given job in aws glue.
+    Keyword arguments:
+    job_name -- the name of the job to execute
+    cut_off_time_start -- the time to not report any timestamps before (use None for all)
+    cut_off_time_end -- the time to not report any timestamps after
+    margin_of_error -- the margin of error time for the job
+    snapshot_type -- the type of snapshots the manifest were generated from (full or incremental)
+    import_type -- the type of import manifests with no space, i.e. "streaming_main" or "streaming_equality"
+    import_prefix -- the base s3 prefix for the import data
+    export_prefix -- the base s3 prefix for the export data
+    """
+    logger.info(f"Executing glue job with name of '{job_name}'")
+
+    import_prefix = import_prefix.rstrip("/")
+    export_prefix = export_prefix.rstrip("/")
+
+    cut_off_time_start_qualified = (
+        "0" if cut_off_time_start is None else str(cut_off_time_start)
+    )
+
+    logger.info(
+        f"Start time for job is '{cut_off_time_start_qualified}', import type is {import_type}, "
+        + f"snapshot type is {snapshot_type}, end time is '{cut_off_time_end}', "
+        + f"import prefix of '{import_prefix}', export prefix of '{export_prefix}' "
+        + f"and margin of error is '{margin_of_error}'"
+    )
+
+    job_run_start_result = glue_client.start_job_run(
+        JobName=job_name,
+        Arguments={
+            "--cut_off_time_start": cut_off_time_start_qualified,
+            "--cut_off_time_end": str(cut_off_time_end),
+            "--margin_of_error": str(margin_of_error),
+            "--import_type": import_type,
+            "--snapshot_type": snapshot_type,
+            "--import_prefix": import_prefix,
+            "--export_prefix": export_prefix,
+            "--enable-metrics": "",
+        },
+    )
+    job_run_id = job_run_start_result["JobRunId"]
+    logger.info(
+        f"Glue job with name of {job_name} started run with id of {job_run_id}"
+    )
+
 
 def handler(event, context):
     """Handle the event from AWS.
@@ -90,6 +395,53 @@ def handler(event, context):
 
     dumped_event = get_escaped_json_string(event)
     logger.info(f'Event", "event": {dumped_event}, "mode": "handler')
+
+    detail_dict = get_and_validate_job_details(
+        event,
+        args.sns_topic,
+    )
+
+    job_name = detail_dict[JOB_NAME_KEY]
+    job_status = detail_dict[JOB_STATUS_KEY]
+    job_queue = detail_dict[JOB_QUEUE_KEY]
+
+    if job_status in IGNORED_JOB_STATUSES:
+        logger.info(
+            f'Exiting normally as job status warrants no further action", '
+            + f'"job_name": "{job_name}", "job_queue": "{job_queue}", "job_status": "{job_status}'
+        )
+        sys.exit(0)
+
+    batch_client = get_batch_client()
+
+    operational_tasks = 0
+    for dependency in args.job_queue_dependencies:
+        queue_tasks = check_operational_batch_tasks_job_queue(dependency, batch_client)
+        operational_tasks += queue_tasks
+
+    if operational_tasks > 0:
+        logger.info(
+            f'Exiting as job queues are still busy, no further action", '
+            + f'"job_name": "{job_name}", "job_queue": "{job_queue}", "job_status": "{job_status}'
+        )
+        sys.exit(0)
+
+    tables = fetch_table_creation_sql_files(SQL_LOCATION)
+
+    base_drop_query = fetch_table_drop_sql_file(SQL_LOCATION)
+
+    recreate_sql_tables(tables, base_drop_query, get_athena_client())
+
+    execute_manifest_glue_job(
+        args.manifest_etl_glue_job_name,
+        generate_milliseconds_epoch_from_timestamp(MANIFEST_COMPARISON_CUT_OFF_DATE_START),
+        generate_milliseconds_epoch_from_timestamp(MANIFEST_COMPARISON_CUT_OFF_DATE_END),
+        MANIFEST_COMPARISON_MARGIN_OF_ERROR_MINUTES,
+        MANIFEST_COMPARISON_SNAPSHOT_TYPE,
+        MANIFEST_COMPARISON_IMPORT_TYPE,
+        args.manifest_s3_input_location_import_historic,
+        get_glue_client())
+
 
 if __name__ == "__main__":
     try:

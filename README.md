@@ -1,6 +1,6 @@
-# dataworks-repo-template
+# dataworks-aws-glue-launcher
 
-## Description
+## A Lambda which prepares and starts AWS Glue jobs once dependencies are met.
 
 This repo contains Makefile to fit the standard pattern.
 This repo is a base to create new non-Terraform repos, adding the githooks submodule, making the repo ready for use.

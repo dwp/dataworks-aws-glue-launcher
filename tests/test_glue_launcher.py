@@ -75,18 +75,16 @@ class TestRetriever(unittest.TestCase):
     #
     #     setup_logging_mock.assert_called_once()
 
-    @mock.patch(
-        "glue_launcher_lambda.glue_launcher.get_and_validate_job_details"
-    )
+    @mock.patch("glue_launcher_lambda.glue_launcher.get_and_validate_job_details")
     @mock.patch("glue_launcher_lambda.glue_launcher.setup_logging")
     @mock.patch("glue_launcher_lambda.glue_launcher.get_parameters")
     @mock.patch("glue_launcher_lambda.glue_launcher.logger")
     def test_handler_ignores_jobs_with_ignored_status(
-            self,
-            mock_logger,
-            get_parameters_mock,
-            setup_logging_mock,
-            get_and_validate_job_details_mock,
+        self,
+        mock_logger,
+        get_parameters_mock,
+        setup_logging_mock,
+        get_and_validate_job_details_mock,
     ):
         get_parameters_mock.return_value = args
 
@@ -109,23 +107,20 @@ class TestRetriever(unittest.TestCase):
         assert pytest_wrapped_e.value.code == 0
 
     @mock.patch("glue_launcher_lambda.glue_launcher.check_running_batch_tasks")
-    @mock.patch(
-        "glue_launcher_lambda.glue_launcher.get_and_validate_job_details"
-    )
-    @mock.patch(
-        "glue_launcher_lambda.glue_launcher.get_batch_client"
-    )
+    @mock.patch("glue_launcher_lambda.glue_launcher.get_and_validate_job_details")
+    @mock.patch("glue_launcher_lambda.glue_launcher.get_batch_client")
     @mock.patch("glue_launcher_lambda.glue_launcher.setup_logging")
     @mock.patch("glue_launcher_lambda.glue_launcher.get_parameters")
     @mock.patch("glue_launcher_lambda.glue_launcher.logger")
-    def test_batch_queue_jobs_present_no_further_action(self,
-                                                        mock_logger,
-                                                        get_parameters_mock,
-                                                        setup_logging_mock,
-                                                        get_batch_client_mock,
-                                                        get_and_validate_job_details_mock,
-                                                        running_batch_tasks_mock
-                                                        ):
+    def test_batch_queue_jobs_present_no_further_action(
+        self,
+        mock_logger,
+        get_parameters_mock,
+        setup_logging_mock,
+        get_batch_client_mock,
+        get_and_validate_job_details_mock,
+        running_batch_tasks_mock,
+    ):
         get_parameters_mock.return_value = args
         running_batch_tasks_mock.return_value = 2
 
@@ -148,52 +143,75 @@ class TestRetriever(unittest.TestCase):
         assert pytest_wrapped_e.value.code == 0
 
     def test_batch_queue_jobs_empty_fetch_table_creation_sql(self):
-        with open(os.path.join(SQL_FILE_LOCATION, "create-parquet-table.sql"), "r") as f:
+        with open(
+            os.path.join(SQL_FILE_LOCATION, "create-parquet-table.sql"), "r"
+        ) as f:
             base_create_parquet_query = f.read()
 
-        with open(os.path.join(SQL_FILE_LOCATION, "create-missing-import-table.sql"), "r", ) as f:
+        with open(
+            os.path.join(SQL_FILE_LOCATION, "create-missing-import-table.sql"),
+            "r",
+        ) as f:
             base_create_missing_import_query = f.read()
 
-        with open(os.path.join(SQL_FILE_LOCATION, "create-missing-export-table.sql"), "r", ) as f:
+        with open(
+            os.path.join(SQL_FILE_LOCATION, "create-missing-export-table.sql"),
+            "r",
+        ) as f:
             base_create_missing_export_query = f.read()
 
         with open(os.path.join(SQL_FILE_LOCATION, "create-count-table.sql"), "r") as f:
             base_create_count_query = f.read()
 
         expected = [
-            [args.missing_imports_table_name, base_create_parquet_query,
-             args.manifest_s3_input_parquet_location_missing_import],
-            [args.missing_exports_table_name, base_create_missing_import_query,
-             args.manifest_s3_input_parquet_location_missing_export],
-            [args.counts_table_name, base_create_missing_export_query,
-             args.manifest_s3_input_parquet_location_counts],
-            [args.mismatched_timestamps_table_name, base_create_count_query,
-             args.manifest_s3_input_parquet_location_mismatched_timestamps],
+            [
+                args.missing_imports_table_name,
+                base_create_parquet_query,
+                args.manifest_s3_input_parquet_location_missing_import,
+            ],
+            [
+                args.missing_exports_table_name,
+                base_create_missing_import_query,
+                args.manifest_s3_input_parquet_location_missing_export,
+            ],
+            [
+                args.counts_table_name,
+                base_create_missing_export_query,
+                args.manifest_s3_input_parquet_location_counts,
+            ],
+            [
+                args.mismatched_timestamps_table_name,
+                base_create_count_query,
+                args.manifest_s3_input_parquet_location_mismatched_timestamps,
+            ],
         ]
         actual = glue_launcher.fetch_table_creation_sql_files(SQL_FILE_LOCATION, args)
-        assert expected == actual, f"Expected does not equal actual. Expected '{expected}' but got '{actual}'"
+        assert (
+            expected == actual
+        ), f"Expected does not equal actual. Expected '{expected}' but got '{actual}'"
 
-    @mock.patch(
-        "glue_launcher_lambda.glue_launcher.get_and_validate_job_details"
-    )
-    def test_batch_queue_jobs_empty_fetch_table_drop_sql(self,
-                                                         get_and_validate_job_details_mock,
-                                                         ):
+    @mock.patch("glue_launcher_lambda.glue_launcher.get_and_validate_job_details")
+    def test_batch_queue_jobs_empty_fetch_table_drop_sql(
+        self,
+        get_and_validate_job_details_mock,
+    ):
         with open(os.path.join(SQL_FILE_LOCATION, "drop-table.sql"), "r") as f:
             base_drop_query = f.read()
 
         expected = base_drop_query
         actual = glue_launcher.fetch_table_drop_sql_file(SQL_FILE_LOCATION, args)
 
-        assert expected == actual, f"Expected does not equal actual. Expected '{expected}' but got '{actual}'"
-
+        assert (
+            expected == actual
+        ), f"Expected does not equal actual. Expected '{expected}' but got '{actual}'"
 
     @mock.patch("glue_launcher_lambda.glue_launcher.execute_athena_query")
     @mock.patch("glue_launcher_lambda.glue_launcher.logger")
-    def test_recreate_single_table(self,
-                                   mock_logger,
-                                   execute_athena_mock,
-                                   ):
+    def test_recreate_single_table(
+        self,
+        mock_logger,
+        execute_athena_mock,
+    ):
 
         athena_client_mock = mock
 
@@ -207,32 +225,36 @@ class TestRetriever(unittest.TestCase):
                 CREATE EXTERNAL TABLE IF NOT EXISTS [table_name]
                 LOCATION '[s3_input_location]'
                 """,
-                args.manifest_s3_input_parquet_location_missing_import
+                args.manifest_s3_input_parquet_location_missing_import,
             ]
         ]
 
-        drop_query = base_drop_query.replace("[table_name]", args.missing_imports_table_name)
+        drop_query = base_drop_query.replace(
+            "[table_name]", args.missing_imports_table_name
+        )
         create_query = f"""
                 CREATE EXTERNAL TABLE IF NOT EXISTS {args.missing_imports_table_name}
                 LOCATION '{args.manifest_s3_input_parquet_location_missing_import}/'
                 """
 
-        actual = glue_launcher.recreate_sql_tables(tables, base_drop_query, athena_client_mock)
+        actual = glue_launcher.recreate_sql_tables(
+            tables, base_drop_query, athena_client_mock
+        )
 
         execute_athena_mock_calls = [
             call(args.manifest_s3_output_location, drop_query, athena_client_mock),
-            call(args.manifest_s3_output_location, create_query, athena_client_mock)
+            call(args.manifest_s3_output_location, create_query, athena_client_mock),
         ]
 
         execute_athena_mock.assert_has_calls(execute_athena_mock_calls)
 
-
     @mock.patch("glue_launcher_lambda.glue_launcher.execute_athena_query")
     @mock.patch("glue_launcher_lambda.glue_launcher.logger")
-    def test_recreate_multiple_tables(self,
-                                   mock_logger,
-                                   execute_athena_mock,
-                                   ):
+    def test_recreate_multiple_tables(
+        self,
+        mock_logger,
+        execute_athena_mock,
+    ):
 
         athena_client_mock = mock
 
@@ -243,13 +265,13 @@ class TestRetriever(unittest.TestCase):
             [
                 args.missing_imports_table_name,
                 "CREATE EXTERNAL TABLE IF NOT EXISTS [table_name] LOCATION '[s3_input_location]'",
-                args.manifest_s3_input_parquet_location_missing_import
+                args.manifest_s3_input_parquet_location_missing_import,
             ],
             [
                 args.missing_exports_table_name,
                 "CREATE EXTERNAL TABLE IF NOT EXISTS [table_name] LOCATION '[s3_input_location]'",
-                args.manifest_s3_input_parquet_location_missing_export
-            ]
+                args.manifest_s3_input_parquet_location_missing_export,
+            ],
         ]
 
         glue_launcher.recreate_sql_tables(tables, base_drop_query, athena_client_mock)
@@ -261,19 +283,33 @@ class TestRetriever(unittest.TestCase):
         missing_exports_create_query = f"CREATE EXTERNAL TABLE IF NOT EXISTS {args.missing_exports_table_name} LOCATION '{args.manifest_s3_input_parquet_location_missing_export}/'"
 
         execute_athena_mock_calls = [
-            call(args.manifest_s3_output_location, missing_imports_drop_query, athena_client_mock),
-            call(args.manifest_s3_output_location, missing_imports_create_query, athena_client_mock),
-            call(args.manifest_s3_output_location, missing_exports_drop_query, athena_client_mock),
-            call(args.manifest_s3_output_location, missing_exports_create_query, athena_client_mock),
+            call(
+                args.manifest_s3_output_location,
+                missing_imports_drop_query,
+                athena_client_mock,
+            ),
+            call(
+                args.manifest_s3_output_location,
+                missing_imports_create_query,
+                athena_client_mock,
+            ),
+            call(
+                args.manifest_s3_output_location,
+                missing_exports_drop_query,
+                athena_client_mock,
+            ),
+            call(
+                args.manifest_s3_output_location,
+                missing_exports_create_query,
+                athena_client_mock,
+            ),
         ]
 
         execute_athena_mock.assert_has_calls(execute_athena_mock_calls)
 
     @mock.patch("glue_launcher_lambda.glue_launcher.get_glue_client")
     @mock.patch("glue_launcher_lambda.glue_launcher.logger")
-    def test_execute_manifest_glue_job(self,
-                                       mock_logger,
-                                       glue_client_mock):
+    def test_execute_manifest_glue_job(self, mock_logger, glue_client_mock):
 
         glue_client_mock.start_job_run = MagicMock()
         glue_client_mock.start_job_run.return_value = {"JobRunId": "12"}
@@ -287,21 +323,23 @@ class TestRetriever(unittest.TestCase):
             import_type="historic",
             import_prefix="/import_prefix/",
             export_prefix="/export_prefix/",
-            glue_client=glue_client_mock)
+            glue_client=glue_client_mock,
+        )
 
         glue_client_mock.start_job_run.assert_called_once_with(
-                JobName=ETL_GLUE_JOB_NAME,
-                Arguments={
-                              "--cut_off_time_start": MANIFEST_COMPARISON_CUT_OFF_DATE_START,
-                              "--cut_off_time_end": MANIFEST_COMPARISON_CUT_OFF_DATE_END,
-                              "--margin_of_error": "2",
-                              "--import_type": "historic",
-                              "--snapshot_type": "full",
-                              "--import_prefix": "/import_prefix",
-                              "--export_prefix": "/export_prefix",
-                              "--enable-metrics": "",
-                          },
-            )
+            JobName=ETL_GLUE_JOB_NAME,
+            Arguments={
+                "--cut_off_time_start": MANIFEST_COMPARISON_CUT_OFF_DATE_START,
+                "--cut_off_time_end": MANIFEST_COMPARISON_CUT_OFF_DATE_END,
+                "--margin_of_error": "2",
+                "--import_type": "historic",
+                "--snapshot_type": "full",
+                "--import_prefix": "/import_prefix",
+                "--export_prefix": "/export_prefix",
+                "--enable-metrics": "",
+            },
+        )
+
 
 if __name__ == "__main__":
     unittest.main()

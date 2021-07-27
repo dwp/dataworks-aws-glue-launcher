@@ -149,19 +149,6 @@ class TestRetriever(unittest.TestCase):
                                                         get_and_validate_job_details_mock,
                                                         running_batch_tasks_mock
                                                         ):
-        running_batch_tasks_mock.return_value = 0
-
-        details_dict = {
-            JOB_NAME_KEY: JOB_NAME,
-            JOB_STATUS_KEY: SUCCEEDED_JOB_STATUS,
-            JOB_QUEUE_KEY: JOB_QUEUE_KEY,
-        }
-
-        get_and_validate_job_details_mock.return_value = details_dict
-
-        event = {
-            "test_key": "test_value",
-        }
 
         with open(os.path.join(SQL_FILE_LOCATION, "create-parquet-table.sql"), "r") as f:
             base_create_parquet_query = f.read()
@@ -197,19 +184,7 @@ class TestRetriever(unittest.TestCase):
                                                              ):
         running_batch_tasks_mock.return_value = 0
 
-        details_dict = {
-            JOB_NAME_KEY: JOB_NAME,
-            JOB_STATUS_KEY: SUCCEEDED_JOB_STATUS,
-            JOB_QUEUE_KEY: JOB_QUEUE_KEY,
-        }
-
-        get_and_validate_job_details_mock.return_value = details_dict
-
         fetch_table_sql_mock.return_value = "['Tables']"
-
-        event = {
-            "test_key": "test_value",
-        }
 
         with open(os.path.join(SQL_FILE_LOCATION, "drop-table.sql"), "r") as f:
             base_drop_query = f.read()
@@ -218,7 +193,6 @@ class TestRetriever(unittest.TestCase):
         actual = glue_launcher.fetch_table_drop_sql_file(SQL_FILE_LOCATION, args)
 
         assert expected == actual, f"Expected does not equal actual. Expected '{expected}' but got '{actual}'"
-
 
 if __name__ == "__main__":
     unittest.main()

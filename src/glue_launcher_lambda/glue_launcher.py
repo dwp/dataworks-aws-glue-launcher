@@ -13,7 +13,11 @@ RUNNABLE_JOB_STATUS = "RUNNABLE"
 STARTING_JOB_STATUS = "STARTING"
 SUCCEEDED_JOB_STATUS = "SUCCEEDED"
 
-OPERATIONAL_JOB_STATUSES = [PENDING_JOB_STATUS, RUNNABLE_JOB_STATUS, STARTING_JOB_STATUS]
+OPERATIONAL_JOB_STATUSES = [
+    PENDING_JOB_STATUS,
+    RUNNABLE_JOB_STATUS,
+    STARTING_JOB_STATUS,
+]
 IGNORED_JOB_STATUSES = [PENDING_JOB_STATUS, RUNNABLE_JOB_STATUS, STARTING_JOB_STATUS]
 
 JOB_NAME_KEY = "jobName"
@@ -27,6 +31,7 @@ JOB_STOPPED_AT_KEY = ("stoppedAt", "Stopped at")
 OPTIONAL_TIME_KEYS = [JOB_CREATED_AT_KEY, JOB_STARTED_AT_KEY, JOB_STOPPED_AT_KEY]
 
 SQL_LOCATION = "sql"
+
 
 def setup_logging(logger_level):
     """Set the default logger with json output."""
@@ -106,49 +111,73 @@ def get_parameters():
         _args.counts_table_name = os.environ["COUNTS_TABLE_NAME"]
 
     if "MISMATCHED_TIMESTAMPS_TABLE_NAME" in os.environ:
-        _args.mismatched_timestamps_table_name = os.environ["MISMATCHED_TIMESTAMPS_TABLE_NAME"]
+        _args.mismatched_timestamps_table_name = os.environ[
+            "MISMATCHED_TIMESTAMPS_TABLE_NAME"
+        ]
 
     if "ETL_GLUE_JOB_NAME" in os.environ:
         _args.etl_glue_job_name = os.environ["ETL_GLUE_JOB_NAME"]
 
     if "MANIFEST_S3_INPUT_LOCATION_IMPORT_HISTORIC" in os.environ:
-        _args.manifest_s3_input_location_import_historic = os.environ["MANIFEST_S3_INPUT_LOCATION_IMPORT_HISTORIC"]
+        _args.manifest_s3_input_location_import_historic = os.environ[
+            "MANIFEST_S3_INPUT_LOCATION_IMPORT_HISTORIC"
+        ]
 
     if "MANIFEST_S3_INPUT_LOCATION_EXPORT_HISTORIC" in os.environ:
-        _args.manifest_s3_input_location_export_historic = os.environ["MANIFEST_S3_INPUT_LOCATION_EXPORT_HISTORIC"]
+        _args.manifest_s3_input_location_export_historic = os.environ[
+            "MANIFEST_S3_INPUT_LOCATION_EXPORT_HISTORIC"
+        ]
 
     if "MANIFEST_COMPARISON_CUT_OFF_DATE_START" in os.environ:
-        _args.manifest_comparison_cut_off_date_start = os.environ["MANIFEST_COMPARISON_CUT_OFF_DATE_START"]
+        _args.manifest_comparison_cut_off_date_start = os.environ[
+            "MANIFEST_COMPARISON_CUT_OFF_DATE_START"
+        ]
     else:
         _args.manifest_comparison_cut_off_date_start = "1983-11-15T09:09:55.000"
 
     if "MANIFEST_COMPARISON_CUT_OFF_DATE_END" in os.environ:
-        _args.manifest_comparison_cut_off_date_end = os.environ["MANIFEST_COMPARISON_CUT_OFF_DATE_END"]
+        _args.manifest_comparison_cut_off_date_end = os.environ[
+            "MANIFEST_COMPARISON_CUT_OFF_DATE_END"
+        ]
     else:
         _args.manifest_comparison_cut_off_date_end = "2099-11-15T09:09:55.000"
 
     if "MANIFEST_COMPARISON_MARGIN_OF_ERROR_MINUTES" in os.environ:
-        _args.manifest_comparison_margin_of_error_minutes = os.environ["MANIFEST_COMPARISON_MARGIN_OF_ERROR_MINUTES"]
+        _args.manifest_comparison_margin_of_error_minutes = os.environ[
+            "MANIFEST_COMPARISON_MARGIN_OF_ERROR_MINUTES"
+        ]
     else:
         _args.manifest_comparison_margin_of_error_minutes = "2"
 
     if "MANIFEST_COMPARISON_SNAPSHOT_TYPE" in os.environ:
-        _args.manifest_comparison_snapshot_type = os.environ["MANIFEST_COMPARISON_SNAPSHOT_TYPE"]
+        _args.manifest_comparison_snapshot_type = os.environ[
+            "MANIFEST_COMPARISON_SNAPSHOT_TYPE"
+        ]
 
     if "MANIFEST_COMPARISON_IMPORT_TYPE" in os.environ:
-        _args.manifest_comparison_import_type = os.environ["MANIFEST_COMPARISON_IMPORT_TYPE"]
+        _args.manifest_comparison_import_type = os.environ[
+            "MANIFEST_COMPARISON_IMPORT_TYPE"
+        ]
 
     if "MANIFEST_S3_INPUT_PARQUET_LOCATION_MISSING_IMPORT" in os.environ:
-        _args.manifest_s3_input_parquet_location_missing_import = os.environ["MANIFEST_S3_INPUT_PARQUET_LOCATION_MISSING_IMPORT"]
+        _args.manifest_s3_input_parquet_location_missing_import = os.environ[
+            "MANIFEST_S3_INPUT_PARQUET_LOCATION_MISSING_IMPORT"
+        ]
 
     if "MANIFEST_S3_INPUT_PARQUET_LOCATION_MISSING_EXPORT" in os.environ:
-        _args.manifest_s3_input_parquet_location_missing_export = os.environ["MANIFEST_S3_INPUT_PARQUET_LOCATION_MISSING_EXPORT"]
+        _args.manifest_s3_input_parquet_location_missing_export = os.environ[
+            "MANIFEST_S3_INPUT_PARQUET_LOCATION_MISSING_EXPORT"
+        ]
 
     if "MANIFEST_S3_INPUT_PARQUET_LOCATION_COUNTS" in os.environ:
-        _args.manifest_s3_input_parquet_location_counts = os.environ["MANIFEST_S3_INPUT_PARQUET_LOCATION_COUNTS"]
+        _args.manifest_s3_input_parquet_location_counts = os.environ[
+            "MANIFEST_S3_INPUT_PARQUET_LOCATION_COUNTS"
+        ]
 
     if "MANIFEST_S3_INPUT_PARQUET_LOCATION_MISMATCHED_TIMESTAMPS" in os.environ:
-        _args.manifest_s3_input_parquet_location_mismatched_timestamps = os.environ["MANIFEST_S3_INPUT_PARQUET_LOCATION_MISMATCHED_TIMESTAMPS"]
+        _args.manifest_s3_input_parquet_location_mismatched_timestamps = os.environ[
+            "MANIFEST_S3_INPUT_PARQUET_LOCATION_MISMATCHED_TIMESTAMPS"
+        ]
 
     if "MANIFEST_S3_OUTPUT_LOCATION" in os.environ:
         _args.manifest_s3_output_location = os.environ["MANIFEST_S3_OUTPUT_LOCATION"]
@@ -172,9 +201,7 @@ def get_and_validate_job_details(message):
     """
 
     dumped_message = get_escaped_json_string(message)
-    logger.info(
-        f'Validating message", "message_details": {dumped_message}'
-    )
+    logger.info(f'Validating message", "message_details": {dumped_message}')
 
     if "detail" not in message:
         raise KeyError("Message contains no 'detail' key")
@@ -195,9 +222,7 @@ def get_and_validate_job_details(message):
     return detail_dict
 
 
-def generate_ms_epoch_from_timestamp(
-        formatted_timestamp_string, minutes_to_add=0
-):
+def generate_ms_epoch_from_timestamp(formatted_timestamp_string, minutes_to_add=0):
     """Returns the 1970 epoch as a number from the given timestamp.
 
     Keyword arguments:
@@ -217,6 +242,7 @@ def get_batch_client():
 
 def get_athena_client():
     return boto3.client("athena")
+
 
 def get_glue_client():
     return boto3.service("glue")
@@ -240,10 +266,16 @@ def fetch_table_creation_sql_files(file_path, args=None):
     with open(os.path.join(file_path, "create-parquet-table.sql"), "r") as f:
         base_create_parquet_query = f.read()
 
-    with open(os.path.join(file_path, "create-missing-import-table.sql"), "r",) as f:
+    with open(
+        os.path.join(file_path, "create-missing-import-table.sql"),
+        "r",
+    ) as f:
         base_create_missing_import_query = f.read()
 
-    with open(os.path.join(file_path, "create-missing-export-table.sql"), "r",) as f:
+    with open(
+        os.path.join(file_path, "create-missing-export-table.sql"),
+        "r",
+    ) as f:
         base_create_missing_export_query = f.read()
 
     with open(os.path.join(file_path, "create-count-table.sql"), "r") as f:
@@ -310,9 +342,7 @@ def execute_athena_query(output_location, query, athena_client):
     output_location -- the s3 location to output the results of the execution to
     query -- the query to execute
     """
-    logger.info(
-        f"Executing query and sending output results to '{output_location}'"
-    )
+    logger.info(f"Executing query and sending output results to '{output_location}'")
 
     query_start_resp = athena_client.start_query_execution(
         QueryString=query, ResultConfiguration={"OutputLocation": output_location}
@@ -331,9 +361,7 @@ def execute_athena_query(output_location, query, athena_client):
 
 def recreate_sql_tables(tables, drop_query, athena_client):
     for table_details in tables:
-        logger.info(
-            f"Dropping table named '{table_details[0]}' if exists"
-        )
+        logger.info(f"Dropping table named '{table_details[0]}' if exists")
         table_drop_query = drop_query
         table_drop_query = table_drop_query.replace("[table_name]", table_details[0])
 
@@ -360,15 +388,15 @@ def recreate_sql_tables(tables, drop_query, athena_client):
 
 
 def execute_manifest_glue_job(
-        job_name,
-        cut_off_time_start,
-        cut_off_time_end,
-        margin_of_error,
-        snapshot_type,
-        import_type,
-        import_prefix,
-        export_prefix,
-        glue_client
+    job_name,
+    cut_off_time_start,
+    cut_off_time_end,
+    margin_of_error,
+    snapshot_type,
+    import_type,
+    import_prefix,
+    export_prefix,
+    glue_client,
 ):
     """Executes the given job in aws glue.
     Keyword arguments:
@@ -411,9 +439,7 @@ def execute_manifest_glue_job(
         },
     )
     job_run_id = job_run_start_result["JobRunId"]
-    logger.info(
-        f"Glue job with name of {job_name} started run with id of {job_run_id}"
-    )
+    logger.info(f"Glue job with name of {job_name} started run with id of {job_run_id}")
 
 
 def handler(event, context):
@@ -431,9 +457,7 @@ def handler(event, context):
     dumped_event = get_escaped_json_string(event)
     logger.info(f'Event", "event": {dumped_event}, "mode": "handler')
 
-    detail_dict = get_and_validate_job_details(
-        event
-    )
+    detail_dict = get_and_validate_job_details(event)
 
     job_name = detail_dict[JOB_NAME_KEY]
     job_status = detail_dict[JOB_STATUS_KEY]
@@ -475,7 +499,8 @@ def handler(event, context):
         args.manifest_comparison_import_type,
         args.manifest_s3_input_location_import_historic,
         args.manifest_s3_input_location_export_historic,
-        get_glue_client())
+        get_glue_client(),
+    )
 
 
 if __name__ == "__main__":

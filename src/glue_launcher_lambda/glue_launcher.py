@@ -147,6 +147,9 @@ def get_parameters():
     if "MANIFEST_S3_INPUT_PARQUET_LOCATION_MISMATCHED_TIMESTAMPS" in os.environ:
         _args.manifest_s3_input_parquet_location_mismatched_timestamps = os.environ["MANIFEST_S3_INPUT_PARQUET_LOCATION_MISMATCHED_TIMESTAMPS"]
 
+    if "MANIFEST_S3_OUTPUT_LOCATION" in os.environ:
+        _args.manifest_s3_output_location = os.environ["MANIFEST_S3_OUTPUT_LOCATION"]
+
     return _args
 
 
@@ -328,27 +331,29 @@ def recreate_sql_tables(tables, drop_query, athena_client):
         logger.info(
             f"Dropping table named '{table_details[0]}' if exists"
         )
-    drop_query = base_drop_query.replace("[table_name]", table_details[0])
-    execute_athena_query(
-        args.manifest_s3_output_location_templates, drop_query, athena_client
-    )
+        table_drop_query = drop_query
+        table_drop_query = table_drop_query.replace("[table_name]", table_details[0])
 
-    logger.info(
-        f"Generating table named '{table_details[0]}' from S3 location of '{table_details[2]}'"
-    )
+        execute_athena_query(
+            args.manifest_s3_output_location, table_drop_query, athena_client
+        )
 
-    s3_location = (
-        table_details[2]
-        if table_details[2].endswith("/")
-        else f"{table_details[2]}/"
-    )
+        logger.info(
+            f"Generating table named '{table_details[0]}' from S3 location of '{table_details[2]}'"
+        )
 
-    create_query = table_details[1].replace("[table_name]", table_details[0])
-    create_query = create_query.replace("[s3_input_location]", s3_location)
+        s3_location = (
+            table_details[2]
+            if table_details[2].endswith("/")
+            else f"{table_details[2]}/"
+        )
 
-    execute_athena_query(
-        args.manifest_s3_output_location_templates, create_query, athena_client
-    )
+        create_query = table_details[1].replace("[table_name]", table_details[0])
+        create_query = create_query.replace("[s3_input_location]", s3_location)
+
+        execute_athena_query(
+            args.manifest_s3_output_location, create_query, athena_client
+        )
 
 
 def execute_manifest_glue_job(

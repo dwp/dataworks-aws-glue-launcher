@@ -1,1 +1,1 @@
-SELECT * FROM helloworld;
+DROP * FROM [table_name];

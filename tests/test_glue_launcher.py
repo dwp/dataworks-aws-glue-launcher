@@ -5,10 +5,12 @@ import pytest
 import json
 import os
 import argparse
+import copy
 from glue_launcher_lambda import glue_launcher
 
 import unittest
 from unittest import mock
+from unittest.mock import call
 
 JOB_NAME_KEY = "jobName"
 JOB_STATUS_KEY = "status"
@@ -39,6 +41,8 @@ args.manifest_s3_input_parquet_location_missing_import = "/missing_imports"
 args.manifest_s3_input_parquet_location_missing_export = "/missing_exports"
 args.manifest_s3_input_parquet_location_counts = "/counts"
 args.manifest_s3_input_parquet_location_mismatched_timestamps = "/mismatched_timestamps"
+args.manifest_s3_output_location = "s3://bucket/output_location"
+
 
 class TestRetriever(unittest.TestCase):
     # @mock.patch(
@@ -100,7 +104,6 @@ class TestRetriever(unittest.TestCase):
         assert pytest_wrapped_e.type == SystemExit
         assert pytest_wrapped_e.value.code == 0
 
-
     @mock.patch("glue_launcher_lambda.glue_launcher.check_running_batch_tasks")
     @mock.patch(
         "glue_launcher_lambda.glue_launcher.get_and_validate_job_details"
@@ -140,52 +143,38 @@ class TestRetriever(unittest.TestCase):
         assert pytest_wrapped_e.type == SystemExit
         assert pytest_wrapped_e.value.code == 0
 
-
-    @mock.patch("glue_launcher_lambda.glue_launcher.check_running_batch_tasks")
-    @mock.patch(
-        "glue_launcher_lambda.glue_launcher.get_and_validate_job_details"
-    )
-    def test_batch_queue_jobs_empty_fetch_table_creation_sql(self,
-                                                        get_and_validate_job_details_mock,
-                                                        running_batch_tasks_mock
-                                                        ):
-
+    def test_batch_queue_jobs_empty_fetch_table_creation_sql(self):
         with open(os.path.join(SQL_FILE_LOCATION, "create-parquet-table.sql"), "r") as f:
             base_create_parquet_query = f.read()
 
-        with open(os.path.join(SQL_FILE_LOCATION, "create-missing-import-table.sql"), "r",) as f:
+        with open(os.path.join(SQL_FILE_LOCATION, "create-missing-import-table.sql"), "r", ) as f:
             base_create_missing_import_query = f.read()
 
-        with open(os.path.join(SQL_FILE_LOCATION, "create-missing-export-table.sql"), "r",) as f:
+        with open(os.path.join(SQL_FILE_LOCATION, "create-missing-export-table.sql"), "r", ) as f:
             base_create_missing_export_query = f.read()
 
         with open(os.path.join(SQL_FILE_LOCATION, "create-count-table.sql"), "r") as f:
             base_create_count_query = f.read()
 
         expected = [
-            [args.missing_imports_table_name, base_create_parquet_query, args.manifest_s3_input_parquet_location_missing_import],
-            [args.missing_exports_table_name, base_create_missing_import_query, args.manifest_s3_input_parquet_location_missing_export],
-            [args.counts_table_name, base_create_missing_export_query, args.manifest_s3_input_parquet_location_counts],
-            [args.mismatched_timestamps_table_name, base_create_count_query, args.manifest_s3_input_parquet_location_mismatched_timestamps],
+            [args.missing_imports_table_name, base_create_parquet_query,
+             args.manifest_s3_input_parquet_location_missing_import],
+            [args.missing_exports_table_name, base_create_missing_import_query,
+             args.manifest_s3_input_parquet_location_missing_export],
+            [args.counts_table_name, base_create_missing_export_query,
+             args.manifest_s3_input_parquet_location_counts],
+            [args.mismatched_timestamps_table_name, base_create_count_query,
+             args.manifest_s3_input_parquet_location_mismatched_timestamps],
         ]
         actual = glue_launcher.fetch_table_creation_sql_files(SQL_FILE_LOCATION, args)
         assert expected == actual, f"Expected does not equal actual. Expected '{expected}' but got '{actual}'"
 
-
-    @mock.patch("glue_launcher_lambda.glue_launcher.fetch_table_creation_sql_files")
-    @mock.patch("glue_launcher_lambda.glue_launcher.check_running_batch_tasks")
     @mock.patch(
         "glue_launcher_lambda.glue_launcher.get_and_validate_job_details"
     )
     def test_batch_queue_jobs_empty_fetch_table_drop_sql(self,
-                                                             get_and_validate_job_details_mock,
-                                                             running_batch_tasks_mock,
-                                                             fetch_table_sql_mock
-                                                             ):
-        running_batch_tasks_mock.return_value = 0
-
-        fetch_table_sql_mock.return_value = "['Tables']"
-
+                                                         get_and_validate_job_details_mock,
+                                                         ):
         with open(os.path.join(SQL_FILE_LOCATION, "drop-table.sql"), "r") as f:
             base_drop_query = f.read()
 
@@ -193,6 +182,88 @@ class TestRetriever(unittest.TestCase):
         actual = glue_launcher.fetch_table_drop_sql_file(SQL_FILE_LOCATION, args)
 
         assert expected == actual, f"Expected does not equal actual. Expected '{expected}' but got '{actual}'"
+
+
+    @mock.patch("glue_launcher_lambda.glue_launcher.execute_athena_query")
+    @mock.patch("glue_launcher_lambda.glue_launcher.logger")
+    def test_recreate_single_table(self,
+                                   mock_logger,
+                                   execute_athena_mock,
+                                   ):
+
+        athena_client_mock = mock
+
+        with open(os.path.join(SQL_FILE_LOCATION, "drop-table.sql"), "r") as f:
+            base_drop_query = f.read()
+
+        tables = [
+            [
+                args.missing_imports_table_name,
+                """
+                CREATE EXTERNAL TABLE IF NOT EXISTS [table_name]
+                LOCATION '[s3_input_location]'
+                """,
+                args.manifest_s3_input_parquet_location_missing_import
+            ]
+        ]
+
+        drop_query = base_drop_query.replace("[table_name]", args.missing_imports_table_name)
+        create_query = f"""
+                CREATE EXTERNAL TABLE IF NOT EXISTS {args.missing_imports_table_name}
+                LOCATION '{args.manifest_s3_input_parquet_location_missing_import}/'
+                """
+
+        actual = glue_launcher.recreate_sql_tables(tables, base_drop_query, athena_client_mock)
+
+        execute_athena_mock_calls = [
+            call(args.manifest_s3_output_location, drop_query, athena_client_mock),
+            call(args.manifest_s3_output_location, create_query, athena_client_mock)
+        ]
+
+        execute_athena_mock.assert_has_calls(execute_athena_mock_calls)
+
+
+    @mock.patch("glue_launcher_lambda.glue_launcher.execute_athena_query")
+    @mock.patch("glue_launcher_lambda.glue_launcher.logger")
+    def test_recreate_multiple_tables(self,
+                                   mock_logger,
+                                   execute_athena_mock,
+                                   ):
+
+        athena_client_mock = mock
+
+        with open(os.path.join(SQL_FILE_LOCATION, "drop-table.sql"), "r") as f:
+            base_drop_query = f.read()
+
+        tables = [
+            [
+                args.missing_imports_table_name,
+                "CREATE EXTERNAL TABLE IF NOT EXISTS [table_name] LOCATION '[s3_input_location]'",
+                args.manifest_s3_input_parquet_location_missing_import
+            ],
+            [
+                args.missing_exports_table_name,
+                "CREATE EXTERNAL TABLE IF NOT EXISTS [table_name] LOCATION '[s3_input_location]'",
+                args.manifest_s3_input_parquet_location_missing_export
+            ]
+        ]
+
+        glue_launcher.recreate_sql_tables(tables, base_drop_query, athena_client_mock)
+
+        missing_imports_drop_query = f"DROP * FROM {args.missing_imports_table_name};\n"
+        missing_imports_create_query = f"CREATE EXTERNAL TABLE IF NOT EXISTS {args.missing_imports_table_name} LOCATION '{args.manifest_s3_input_parquet_location_missing_import}/'"
+
+        missing_exports_drop_query = f"DROP * FROM {args.missing_exports_table_name};\n"
+        missing_exports_create_query = f"CREATE EXTERNAL TABLE IF NOT EXISTS {args.missing_exports_table_name} LOCATION '{args.manifest_s3_input_parquet_location_missing_export}/'"
+
+        execute_athena_mock_calls = [
+            call(args.manifest_s3_output_location, missing_imports_drop_query, athena_client_mock),
+            call(args.manifest_s3_output_location, missing_imports_create_query, athena_client_mock),
+            call(args.manifest_s3_output_location, missing_exports_drop_query, athena_client_mock),
+            call(args.manifest_s3_output_location, missing_exports_create_query, athena_client_mock),
+        ]
+
+        execute_athena_mock.assert_has_calls(execute_athena_mock_calls)
 
 if __name__ == "__main__":
     unittest.main()

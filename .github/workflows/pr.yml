@@ -1,4 +1,4 @@
-name: Perform Python Format
+name: PR Formatting and Testing
 
 on: pull_request
 

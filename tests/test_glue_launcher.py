@@ -145,15 +145,7 @@ class TestRetriever(unittest.TestCase):
     @mock.patch(
         "glue_launcher_lambda.glue_launcher.get_and_validate_job_details"
     )
-    @mock.patch(
-        "glue_launcher_lambda.glue_launcher.get_batch_client"
-    )
-    @mock.patch("glue_launcher_lambda.glue_launcher.setup_logging")
-    @mock.patch("glue_launcher_lambda.glue_launcher.logger")
     def test_batch_queue_jobs_empty_fetch_table_creation_sql(self,
-                                                        mock_logger,
-                                                        setup_logging_mock,
-                                                        get_batch_client_mock,
                                                         get_and_validate_job_details_mock,
                                                         running_batch_tasks_mock
                                                         ):
@@ -192,20 +184,13 @@ class TestRetriever(unittest.TestCase):
         actual = glue_launcher.fetch_table_creation_sql_files(SQL_FILE_LOCATION, args)
         assert expected == actual, f"Expected does not equal actual. Expected '{expected}' but got '{actual}'"
 
+
     @mock.patch("glue_launcher_lambda.glue_launcher.fetch_table_creation_sql_files")
     @mock.patch("glue_launcher_lambda.glue_launcher.check_running_batch_tasks")
     @mock.patch(
         "glue_launcher_lambda.glue_launcher.get_and_validate_job_details"
     )
-    @mock.patch(
-        "glue_launcher_lambda.glue_launcher.get_batch_client"
-    )
-    @mock.patch("glue_launcher_lambda.glue_launcher.setup_logging")
-    @mock.patch("glue_launcher_lambda.glue_launcher.logger")
     def test_batch_queue_jobs_empty_fetch_table_drop_sql(self,
-                                                             mock_logger,
-                                                             setup_logging_mock,
-                                                             get_batch_client_mock,
                                                              get_and_validate_job_details_mock,
                                                              running_batch_tasks_mock,
                                                              fetch_table_sql_mock
@@ -233,7 +218,6 @@ class TestRetriever(unittest.TestCase):
         actual = glue_launcher.fetch_table_drop_sql_file(SQL_FILE_LOCATION, args)
 
         assert expected == actual, f"Expected does not equal actual. Expected '{expected}' but got '{actual}'"
-
 
 
 if __name__ == "__main__":

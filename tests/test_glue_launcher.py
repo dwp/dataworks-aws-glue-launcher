@@ -3,6 +3,7 @@
 """glue_launcher_lambda"""
 import pytest
 import json
+import os
 import argparse
 from glue_launcher_lambda import glue_launcher
 
@@ -21,12 +22,23 @@ SUCCEEDED_JOB_STATUS = "SUCCEEDED"
 
 JOB_NAME = "test job"
 
+SQL_FILE_LOCATION = "tests/sql"
+
 args = argparse.Namespace()
 args.log_level = "INFO"
 args.application = "glue_launcher"
 args.environment = "development"
 args.job_queue_dependencies = "testqueue, queuetest"
 
+# Fetch table values
+args.missing_imports_table_name = "missing_imports"
+args.missing_exports_table_name = "missing_exports"
+args.counts_table_name = "counts"
+args.mismatched_timestamps_table_name = "mismatched_timestamps"
+args.manifest_s3_input_parquet_location_missing_import = "/missing_imports"
+args.manifest_s3_input_parquet_location_missing_export = "/missing_exports"
+args.manifest_s3_input_parquet_location_counts = "/counts"
+args.manifest_s3_input_parquet_location_mismatched_timestamps = "/mismatched_timestamps"
 
 class TestRetriever(unittest.TestCase):
     # @mock.patch(
@@ -127,6 +139,59 @@ class TestRetriever(unittest.TestCase):
 
         assert pytest_wrapped_e.type == SystemExit
         assert pytest_wrapped_e.value.code == 0
+
+
+    @mock.patch("glue_launcher_lambda.glue_launcher.check_running_batch_tasks")
+    @mock.patch(
+        "glue_launcher_lambda.glue_launcher.get_and_validate_job_details"
+    )
+    @mock.patch(
+        "glue_launcher_lambda.glue_launcher.get_batch_client"
+    )
+    @mock.patch("glue_launcher_lambda.glue_launcher.setup_logging")
+    @mock.patch("glue_launcher_lambda.glue_launcher.logger")
+    def test_batch_queue_jobs_empty_fetch_table_creation_sql(self,
+                                                        mock_logger,
+                                                        setup_logging_mock,
+                                                        get_batch_client_mock,
+                                                        get_and_validate_job_details_mock,
+                                                        running_batch_tasks_mock
+                                                        ):
+        running_batch_tasks_mock.return_value = 0
+
+        details_dict = {
+            JOB_NAME_KEY: JOB_NAME,
+            JOB_STATUS_KEY: SUCCEEDED_JOB_STATUS,
+            JOB_QUEUE_KEY: JOB_QUEUE_KEY,
+        }
+
+        get_and_validate_job_details_mock.return_value = details_dict
+
+        event = {
+            "test_key": "test_value",
+        }
+
+        with open(os.path.join(SQL_FILE_LOCATION, "create-parquet-table.sql"), "r") as f:
+            base_create_parquet_query = f.read()
+
+        with open(os.path.join(SQL_FILE_LOCATION, "create-missing-import-table.sql"), "r",) as f:
+            base_create_missing_import_query = f.read()
+
+        with open(os.path.join(SQL_FILE_LOCATION, "create-missing-export-table.sql"), "r",) as f:
+            base_create_missing_export_query = f.read()
+
+        with open(os.path.join(SQL_FILE_LOCATION, "create-count-table.sql"), "r") as f:
+            base_create_count_query = f.read()
+
+        expected = [
+            [args.missing_imports_table_name, base_create_parquet_query, args.manifest_s3_input_parquet_location_missing_import],
+            [args.missing_exports_table_name, base_create_missing_import_query, args.manifest_s3_input_parquet_location_missing_export],
+            [args.counts_table_name, base_create_missing_export_query, args.manifest_s3_input_parquet_location_counts],
+            [args.mismatched_timestamps_table_name, base_create_count_query, args.manifest_s3_input_parquet_location_mismatched_timestamps],
+        ]
+        actual = glue_launcher.fetch_table_creation_sql_files(SQL_FILE_LOCATION, args)
+        assert expected == actual, f"Expected does not equal actual. Expected '{expected}' but got '{actual}'"
+
 
 
 if __name__ == "__main__":

@@ -114,6 +114,9 @@ def get_parameters():
     if "MANIFEST_S3_INPUT_LOCATION_IMPORT_HISTORIC" in os.environ:
         _args.manifest_s3_input_location_import_historic = os.environ["MANIFEST_S3_INPUT_LOCATION_IMPORT_HISTORIC"]
 
+    if "MANIFEST_S3_INPUT_LOCATION_EXPORT_HISTORIC" in os.environ:
+        _args.manifest_s3_input_location_export_historic = os.environ["MANIFEST_S3_INPUT_LOCATION_EXPORT_HISTORIC"]
+
     if "MANIFEST_COMPARISON_CUT_OFF_DATE_START" in os.environ:
         _args.manifest_comparison_cut_off_date_start = os.environ["MANIFEST_COMPARISON_CUT_OFF_DATE_START"]
     else:
@@ -471,6 +474,7 @@ def handler(event, context):
         args.manifest_comparison_snapshot_type,
         args.manifest_comparison_import_type,
         args.manifest_s3_input_location_import_historic,
+        args.manifest_s3_input_location_export_historic,
         get_glue_client())
 
 

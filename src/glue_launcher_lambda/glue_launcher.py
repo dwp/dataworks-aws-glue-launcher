@@ -269,7 +269,7 @@ def fetch_table_creation_sql_files(file_path, args=None):
     return tables
 
 
-def fetch_table_drop_sql_file(file_path):
+def fetch_table_drop_sql_file(file_path, args=None):
     with open(os.path.join(file_path, "drop-table.sql"), "r") as f:
         base_drop_query = f.read()
         return base_drop_query

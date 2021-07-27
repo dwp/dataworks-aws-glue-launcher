@@ -135,6 +135,18 @@ def get_parameters():
     if "MANIFEST_COMPARISON_IMPORT_TYPE" in os.environ:
         _args.manifest_comparison_import_type = os.environ["MANIFEST_COMPARISON_IMPORT_TYPE"]
 
+    if "MANIFEST_S3_INPUT_PARQUET_LOCATION_MISSING_IMPORT" in os.environ:
+        _args.manifest_s3_input_parquet_location_missing_import = os.environ["MANIFEST_S3_INPUT_PARQUET_LOCATION_MISSING_IMPORT"]
+
+    if "MANIFEST_S3_INPUT_PARQUET_LOCATION_MISSING_EXPORT" in os.environ:
+        _args.manifest_s3_input_parquet_location_missing_export = os.environ["MANIFEST_S3_INPUT_PARQUET_LOCATION_MISSING_EXPORT"]
+
+    if "MANIFEST_S3_INPUT_PARQUET_LOCATION_COUNTS" in os.environ:
+        _args.manifest_s3_input_parquet_location_counts = os.environ["MANIFEST_S3_INPUT_PARQUET_LOCATION_COUNTS"]
+
+    if "MANIFEST_S3_INPUT_PARQUET_LOCATION_MISMATCHED_TIMESTAMPS" in os.environ:
+        _args.manifest_s3_input_parquet_location_mismatched_timestamps = os.environ["MANIFEST_S3_INPUT_PARQUET_LOCATION_MISMATCHED_TIMESTAMPS"]
+
     return _args
 
 
@@ -218,7 +230,7 @@ def check_running_batch_tasks(job_queue, batch_client):
     return operational_tasks
 
 
-def fetch_table_creation_sql_files(file_path):
+def fetch_table_creation_sql_files(file_path, args=None):
     with open(os.path.join(file_path, "create-parquet-table.sql"), "r") as f:
         base_create_parquet_query = f.read()
 

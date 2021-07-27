@@ -269,7 +269,6 @@ class TestRetriever(unittest.TestCase):
 
         execute_athena_mock.assert_has_calls(execute_athena_mock_calls)
 
-
     @mock.patch("glue_launcher_lambda.glue_launcher.get_glue_client")
     @mock.patch("glue_launcher_lambda.glue_launcher.logger")
     def test_execute_manifest_glue_job(self,
@@ -277,29 +276,29 @@ class TestRetriever(unittest.TestCase):
                                        glue_client_mock):
 
         glue_client_mock.start_job_run = MagicMock()
-        glue_client_mock.start_job_run.return_value = "12"
+        glue_client_mock.start_job_run.return_value = {"JobRunId": "12"}
 
         glue_launcher.execute_manifest_glue_job(
             ETL_GLUE_JOB_NAME,
             MANIFEST_COMPARISON_CUT_OFF_DATE_START,
             MANIFEST_COMPARISON_CUT_OFF_DATE_END,
-            "2",
-            "full",
-            "historic",
-            "/import_prefix",
-            "/export_prefix",
-            glue_client_mock())
+            margin_of_error="2",
+            snapshot_type="full",
+            import_type="historic",
+            import_prefix="/import_prefix/",
+            export_prefix="/export_prefix/",
+            glue_client=glue_client_mock)
 
         glue_client_mock.start_job_run.assert_called_once_with(
                 JobName=ETL_GLUE_JOB_NAME,
                 Arguments={
                               "--cut_off_time_start": MANIFEST_COMPARISON_CUT_OFF_DATE_START,
                               "--cut_off_time_end": MANIFEST_COMPARISON_CUT_OFF_DATE_END,
-                              "--margin_of_error": str(2),
-                              "--import_type": "full",
-                              "--snapshot_type": "historic",
-                              "--import_prefix": "import_prefix",
-                              "--export_prefix": "export_prefix",
+                              "--margin_of_error": "2",
+                              "--import_type": "historic",
+                              "--snapshot_type": "full",
+                              "--import_prefix": "/import_prefix",
+                              "--export_prefix": "/export_prefix",
                               "--enable-metrics": "",
                           },
             )

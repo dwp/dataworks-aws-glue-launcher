@@ -15,5 +15,6 @@ git-hooks: ## Set up hooks in .githooks
 	@git submodule update --init .githooks ; \
 	git config core.hooksPath .githooks \
 
+.PHONY: unittest
 unittest:
-    tox
+	tox

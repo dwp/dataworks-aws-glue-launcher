@@ -3,6 +3,8 @@ import os
 import sys
 import argparse
 import json
+import boto3
+import socket
 
 logger = None
 args = None

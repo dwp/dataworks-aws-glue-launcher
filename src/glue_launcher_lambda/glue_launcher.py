@@ -3,8 +3,10 @@ import os
 import sys
 import argparse
 import json
-import boto3
 import socket
+import boto3
+import botocore
+from datetime import datetime, timedelta
 
 logger = None
 args = None
@@ -21,6 +23,7 @@ OPERATIONAL_JOB_STATUSES = [
     STARTING_JOB_STATUS,
 ]
 IGNORED_JOB_STATUSES = [PENDING_JOB_STATUS, RUNNABLE_JOB_STATUS, STARTING_JOB_STATUS]
+FINISHED_JOB_STATUSES = [SUCCEEDED_JOB_STATUS, FAILED_JOB_STATUS]
 
 JOB_NAME_KEY = "jobName"
 JOB_STATUS_KEY = "status"
@@ -33,6 +36,18 @@ JOB_STOPPED_AT_KEY = ("stoppedAt", "Stopped at")
 OPTIONAL_TIME_KEYS = [JOB_CREATED_AT_KEY, JOB_STARTED_AT_KEY, JOB_STOPPED_AT_KEY]
 
 SQL_LOCATION = "sql"
+
+boto_client_config = botocore.config.Config(
+    max_pool_connections=100, retries={"max_attempts": 10, "mode": "standard"}
+)
+
+
+def get_today_midnight():
+    return datetime.utcnow().replace(hour=0, minute=0, second=0, microsecond=0)
+
+
+def get_previous_midnight():
+    return get_today_midnight() - timedelta(days=1)
 
 
 def setup_logging(logger_level):
@@ -100,25 +115,22 @@ def get_parameters():
         dependencies = os.environ["JOB_QUEUE_DEPENDENCIES"].split(",")
         _args.job_queue_dependencies = dependencies
 
-    if "ATHENA_S3_OUTPUT_LOCATION" in os.environ:
-        _args.athena_s3_output_location = os.environ["ATHENA_S3_OUTPUT_LOCATION"]
-
-    if "MISSING_IMPORTS_TABLE_NAME" in os.environ:
-        _args.missing_imports_table_name = os.environ["MISSING_IMPORTS_TABLE_NAME"]
-
-    if "MISSING_EXPORTS_TABLE_NAME" in os.environ:
-        _args.missing_exports_table_name = os.environ["MISSING_EXPORTS_TABLE_NAME"]
-
-    if "COUNTS_TABLE_NAME" in os.environ:
-        _args.counts_table_name = os.environ["COUNTS_TABLE_NAME"]
-
-    if "MISMATCHED_TIMESTAMPS_TABLE_NAME" in os.environ:
-        _args.mismatched_timestamps_table_name = os.environ[
-            "MISMATCHED_TIMESTAMPS_TABLE_NAME"
+    if "MANIFEST_MISMATCHED_TIMESTAMPS_TABLE_NAME" in os.environ:
+        _args.manifest_mismatched_timestamps_table_name = os.environ[
+            "MANIFEST_MISMATCHED_TIMESTAMPS_TABLE_NAME"
         ]
 
     if "ETL_GLUE_JOB_NAME" in os.environ:
         _args.etl_glue_job_name = os.environ["ETL_GLUE_JOB_NAME"]
+
+    if "MANIFEST_MISSING_IMPORTS_TABLE_NAME" in os.environ:
+        _args.missing_imports_table_name = os.environ["MISSING_IMPORTS_TABLE_NAME"]
+
+    if "MANIFEST_MISSING_EXPORTS_TABLE_NAME" in os.environ:
+        _args.missing_exports_table_name = os.environ["MISSING_EXPORTS_TABLE_NAME"]
+
+    if "MANIFEST_COUNTS_PARQUET_TABLE_NAME" in os.environ:
+        _args.manifest_counts_parquet_table_name = os.environ["MANIFEST_COUNTS_PARQUET_TABLE_NAME"]
 
     if "MANIFEST_S3_INPUT_LOCATION_IMPORT_HISTORIC" in os.environ:
         _args.manifest_s3_input_location_import_historic = os.environ[
@@ -131,18 +143,20 @@ def get_parameters():
         ]
 
     if "MANIFEST_COMPARISON_CUT_OFF_DATE_START" in os.environ:
-        _args.manifest_comparison_cut_off_date_start = os.environ[
-            "MANIFEST_COMPARISON_CUT_OFF_DATE_START"
-        ]
+        if os.environ["MANIFEST_COMPARISON_CUT_OFF_DATE_START"].upper() == "PREVIOUS_DAY_MIDNIGHT":
+            _args.manifest_comparison_cut_off_date_start = get_previous_midnight()
+        else:
+            _args.manifest_comparison_cut_off_date_start = os.environ["MANIFEST_COMPARISON_CUT_OFF_DATE_START"]
     else:
-        _args.manifest_comparison_cut_off_date_start = "1983-11-15T09:09:55.000"
+        _args.manifest_comparison_cut_off_date_start = get_previous_midnight()
 
     if "MANIFEST_COMPARISON_CUT_OFF_DATE_END" in os.environ:
-        _args.manifest_comparison_cut_off_date_end = os.environ[
-            "MANIFEST_COMPARISON_CUT_OFF_DATE_END"
-        ]
+        if os.environ["MANIFEST_COMPARISON_CUT_OFF_DATE_END"].upper() == "TODAY_MIDNIGHT":
+            _args.manifest_comparison_cut_off_date_end = get_today_midnight()
+        else:
+            _args.manifest_comparison_cut_off_date_end = os.environ["MANIFEST_COMPARISON_CUT_OFF_DATE_END"]
     else:
-        _args.manifest_comparison_cut_off_date_end = "2099-11-15T09:09:55.000"
+        _args.manifest_comparison_cut_off_date_end = get_today_midnight()
 
     if "MANIFEST_COMPARISON_MARGIN_OF_ERROR_MINUTES" in os.environ:
         _args.manifest_comparison_margin_of_error_minutes = os.environ[
@@ -239,15 +253,15 @@ def generate_ms_epoch_from_timestamp(formatted_timestamp_string, minutes_to_add=
 
 
 def get_batch_client():
-    return boto3.client("batch")
+    return boto3.client("batch", config=boto_client_config)
 
 
 def get_athena_client():
-    return boto3.client("athena")
+    return boto3.client("athena", config=boto_client_config)
 
 
 def get_glue_client():
-    return boto3.service("glue")
+    return boto3.service("glue", config=boto_client_config)
 
 
 def check_running_batch_tasks(job_queue, batch_client):
@@ -285,22 +299,22 @@ def fetch_table_creation_sql_files(file_path, args=None):
 
     tables = [
         [
-            args.missing_imports_table_name,
+            args.manifest_missing_imports_table_name,
             base_create_missing_import_query,
             args.manifest_s3_input_parquet_location_missing_import,
         ],
         [
-            args.missing_exports_table_name,
+            args.manifest_missing_exports_table_name,
             base_create_missing_export_query,
             args.manifest_s3_input_parquet_location_missing_export,
         ],
         [
-            args.counts_table_name,
+            args.manifest_counts_parquet_table_name,
             base_create_count_query,
             args.manifest_s3_input_parquet_location_counts,
         ],
         [
-            args.mismatched_timestamps_table_name,
+            args.manifest_mismatched_timestamps_table_name,
             base_create_parquet_query,
             args.manifest_s3_input_parquet_location_mismatched_timestamps,
         ],
@@ -315,20 +329,19 @@ def fetch_table_drop_sql_file(file_path, args=None):
         return base_drop_query
 
 
-def poll_athena_query_status(id):
+def poll_athena_query_status(id, athena_client):
     """Polls athena for the status of a query.
 
     Keyword arguments:
     id -- the id of the query in athena
     """
-    athena_client = get_client(service_name="athena")
     time_taken = 1
     while True:
         query_execution_resp = athena_client.get_query_execution(QueryExecutionId=id)
 
         state = query_execution_resp["QueryExecution"]["Status"]["State"]
         if state in ("SUCCEEDED", "FAILED", "CANCELLED"):
-            console_printer.print_info(
+            logger.info(
                 f"Athena query execution finished in {str(time_taken)} seconds with status of '{state}'"
             )
             return state
@@ -349,7 +362,7 @@ def execute_athena_query(output_location, query, athena_client):
     query_start_resp = athena_client.start_query_execution(
         QueryString=query, ResultConfiguration={"OutputLocation": output_location}
     )
-    execution_state = poll_athena_query_status(query_start_resp["QueryExecutionId"])
+    execution_state = poll_athena_query_status(query_start_resp["QueryExecutionId"], athena_client)
 
     if execution_state != "SUCCEEDED":
         raise KeyError(
@@ -465,7 +478,7 @@ def handler(event, context):
     job_status = detail_dict[JOB_STATUS_KEY]
     job_queue = detail_dict[JOB_QUEUE_KEY]
 
-    if job_status in IGNORED_JOB_STATUSES:
+    if job_status not in FINISHED_JOB_STATUSES:
         logger.info(
             f'Exiting normally as job status warrants no further action", '
             + f'"job_name": "{job_name}", "job_queue": "{job_queue}", "job_status": "{job_status}'

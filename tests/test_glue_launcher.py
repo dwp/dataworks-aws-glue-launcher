@@ -183,7 +183,7 @@ class TestRetriever(unittest.TestCase):
 
         batch_client_mock.side_effect = [
             {"jobSummaryList": [1]},
-            {"jobSummaryList": [1]},
+            {"jobSummaryList": [1, 2]},
             {"jobSummaryList": [1]}
         ]
 
@@ -196,7 +196,7 @@ class TestRetriever(unittest.TestCase):
         ]
         batch_client_mock.list_jobs.assert_has_calls(status_calls, True)
 
-        assert response == 3, "Response is not equal to 3"
+        assert response == 4, "Response is not equal to 4"
 
     @mock.patch("glue_launcher_lambda.glue_launcher.execute_athena_query")
     @mock.patch("glue_launcher_lambda.glue_launcher.logger")

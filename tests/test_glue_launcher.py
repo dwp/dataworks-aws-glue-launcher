@@ -178,6 +178,26 @@ class TestRetriever(unittest.TestCase):
             expected == actual
         ), f"Expected does not equal actual. Expected '{expected}' but got '{actual}'"
 
+    @mock.patch("glue_launcher_lambda.glue_launcher.get_batch_client")
+    def test_batch_tasks_running(self, batch_client_mock):
+
+        batch_client_mock.side_effect = [
+            {"jobSummaryList": [1]},
+            {"jobSummaryList": [1]},
+            {"jobSummaryList": [1]}
+        ]
+
+        response = glue_launcher.check_running_batch_tasks("job_queue", batch_client_mock)
+
+        status_calls = [
+            call(jobQueue="job_queue", jobStatus="PENDING"),
+            call(jobQueue="job_queue", jobStatus="RUNNABLE"),
+            call(jobQueue="job_queue", jobStatus="STARTING")
+        ]
+        batch_client_mock.list_jobs.assert_has_calls(status_calls, True)
+
+        assert response == 3, "Response is not equal to 3"
+
     @mock.patch("glue_launcher_lambda.glue_launcher.execute_athena_query")
     @mock.patch("glue_launcher_lambda.glue_launcher.logger")
     def test_recreate_single_table(

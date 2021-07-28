@@ -181,7 +181,7 @@ class TestRetriever(unittest.TestCase):
     @mock.patch("glue_launcher_lambda.glue_launcher.get_batch_client")
     def test_batch_tasks_running(self, batch_client_mock):
 
-        batch_client_mock.side_effect = [
+        batch_client_mock.list_jobs.side_effect = [
             {"jobSummaryList": [1]},
             {"jobSummaryList": [1, 2]},
             {"jobSummaryList": [1]},

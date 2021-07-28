@@ -184,15 +184,17 @@ class TestRetriever(unittest.TestCase):
         batch_client_mock.side_effect = [
             {"jobSummaryList": [1]},
             {"jobSummaryList": [1, 2]},
-            {"jobSummaryList": [1]}
+            {"jobSummaryList": [1]},
         ]
 
-        response = glue_launcher.check_running_batch_tasks("job_queue", batch_client_mock)
+        response = glue_launcher.check_running_batch_tasks(
+            "job_queue", batch_client_mock
+        )
 
         status_calls = [
             call(jobQueue="job_queue", jobStatus="PENDING"),
             call(jobQueue="job_queue", jobStatus="RUNNABLE"),
-            call(jobQueue="job_queue", jobStatus="STARTING")
+            call(jobQueue="job_queue", jobStatus="STARTING"),
         ]
         batch_client_mock.list_jobs.assert_has_calls(status_calls, True)
 
@@ -269,10 +271,14 @@ class TestRetriever(unittest.TestCase):
 
         glue_launcher.recreate_sql_tables(tables, base_drop_query, athena_client_mock)
 
-        missing_imports_drop_query = f"DROP * FROM {args.manifest_missing_imports_table_name};\n"
+        missing_imports_drop_query = (
+            f"DROP * FROM {args.manifest_missing_imports_table_name};\n"
+        )
         missing_imports_create_query = f"CREATE EXTERNAL TABLE IF NOT EXISTS {args.manifest_missing_imports_table_name} LOCATION '{args.manifest_s3_input_parquet_location_missing_import}/'"
 
-        missing_exports_drop_query = f"DROP * FROM {args.manifest_missing_exports_table_name};\n"
+        missing_exports_drop_query = (
+            f"DROP * FROM {args.manifest_missing_exports_table_name};\n"
+        )
         missing_exports_create_query = f"CREATE EXTERNAL TABLE IF NOT EXISTS {args.manifest_missing_exports_table_name} LOCATION '{args.manifest_s3_input_parquet_location_missing_export}/'"
 
         execute_athena_mock_calls = [
@@ -338,33 +344,46 @@ class TestRetriever(unittest.TestCase):
     @mock.patch("glue_launcher_lambda.glue_launcher.get_parameters")
     @mock.patch("glue_launcher_lambda.glue_launcher.setup_logging")
     @mock.patch("glue_launcher_lambda.glue_launcher.logger")
-    def test_athena_executions(self,
-                               mock_logger,
-                               mock_setup_logger,
-                               get_params_mock,
-                               athena_client_mock,
-                               poll_athena_mock):
+    def test_athena_executions(
+        self,
+        mock_logger,
+        mock_setup_logger,
+        get_params_mock,
+        athena_client_mock,
+        poll_athena_mock,
+    ):
 
         get_params_mock.return_value = args
-        athena_client_mock.start_query_execution.return_value = {"QueryExecutionId": "12"}
+        athena_client_mock.start_query_execution.return_value = {
+            "QueryExecutionId": "12"
+        }
 
         poll_athena_mock.return_value = "SUCCEEDED"
 
         base_drop_query = "DROP * FROM test_table;"
-        glue_launcher.execute_athena_query(args.manifest_s3_output_location, base_drop_query, athena_client_mock)
+        glue_launcher.execute_athena_query(
+            args.manifest_s3_output_location, base_drop_query, athena_client_mock
+        )
 
-        athena_client_mock.start_query_execution.assert_called_with(QueryString="DROP * FROM test_table;", ResultConfiguration={"OutputLocation": "s3://bucket/output_location"})
+        athena_client_mock.start_query_execution.assert_called_with(
+            QueryString="DROP * FROM test_table;",
+            ResultConfiguration={"OutputLocation": "s3://bucket/output_location"},
+        )
         athena_client_mock.get_query_results.assert_called_with(QueryExecutionId="12")
         poll_athena_mock.assert_called_with("12", athena_client_mock)
 
-
     @mock.patch("glue_launcher_lambda.glue_launcher.get_today_midnight")
     def test_yesterday_midnight(self, midnight_mock):
-        midnight_mock.return_value = datetime.strptime("2021-07-27 00:00:00", "%Y-%m-%d %H:%M:%S")
+        midnight_mock.return_value = datetime.strptime(
+            "2021-07-27 00:00:00", "%Y-%m-%d %H:%M:%S"
+        )
 
         expected = "2021-07-26 00:00:00"
         actual = str(glue_launcher.get_previous_midnight())
-        assert expected == actual, f"Expected '{expected}' does not match actual '{actual}'"
+        assert (
+            expected == actual
+        ), f"Expected '{expected}' does not match actual '{actual}'"
+
 
 if __name__ == "__main__":
     unittest.main()

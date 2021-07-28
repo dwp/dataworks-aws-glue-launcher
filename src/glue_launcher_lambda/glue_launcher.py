@@ -130,7 +130,9 @@ def get_parameters():
         _args.missing_exports_table_name = os.environ["MISSING_EXPORTS_TABLE_NAME"]
 
     if "MANIFEST_COUNTS_PARQUET_TABLE_NAME" in os.environ:
-        _args.manifest_counts_parquet_table_name = os.environ["MANIFEST_COUNTS_PARQUET_TABLE_NAME"]
+        _args.manifest_counts_parquet_table_name = os.environ[
+            "MANIFEST_COUNTS_PARQUET_TABLE_NAME"
+        ]
 
     if "MANIFEST_S3_INPUT_LOCATION_IMPORT_HISTORIC" in os.environ:
         _args.manifest_s3_input_location_import_historic = os.environ[
@@ -143,18 +145,28 @@ def get_parameters():
         ]
 
     if "MANIFEST_COMPARISON_CUT_OFF_DATE_START" in os.environ:
-        if os.environ["MANIFEST_COMPARISON_CUT_OFF_DATE_START"].upper() == "PREVIOUS_DAY_MIDNIGHT":
+        if (
+            os.environ["MANIFEST_COMPARISON_CUT_OFF_DATE_START"].upper()
+            == "PREVIOUS_DAY_MIDNIGHT"
+        ):
             _args.manifest_comparison_cut_off_date_start = get_previous_midnight()
         else:
-            _args.manifest_comparison_cut_off_date_start = os.environ["MANIFEST_COMPARISON_CUT_OFF_DATE_START"]
+            _args.manifest_comparison_cut_off_date_start = os.environ[
+                "MANIFEST_COMPARISON_CUT_OFF_DATE_START"
+            ]
     else:
         _args.manifest_comparison_cut_off_date_start = get_previous_midnight()
 
     if "MANIFEST_COMPARISON_CUT_OFF_DATE_END" in os.environ:
-        if os.environ["MANIFEST_COMPARISON_CUT_OFF_DATE_END"].upper() == "TODAY_MIDNIGHT":
+        if (
+            os.environ["MANIFEST_COMPARISON_CUT_OFF_DATE_END"].upper()
+            == "TODAY_MIDNIGHT"
+        ):
             _args.manifest_comparison_cut_off_date_end = get_today_midnight()
         else:
-            _args.manifest_comparison_cut_off_date_end = os.environ["MANIFEST_COMPARISON_CUT_OFF_DATE_END"]
+            _args.manifest_comparison_cut_off_date_end = os.environ[
+                "MANIFEST_COMPARISON_CUT_OFF_DATE_END"
+            ]
     else:
         _args.manifest_comparison_cut_off_date_end = get_today_midnight()
 
@@ -362,7 +374,9 @@ def execute_athena_query(output_location, query, athena_client):
     query_start_resp = athena_client.start_query_execution(
         QueryString=query, ResultConfiguration={"OutputLocation": output_location}
     )
-    execution_state = poll_athena_query_status(query_start_resp["QueryExecutionId"], athena_client)
+    execution_state = poll_athena_query_status(
+        query_start_resp["QueryExecutionId"], athena_client
+    )
 
     if execution_state != "SUCCEEDED":
         raise KeyError(

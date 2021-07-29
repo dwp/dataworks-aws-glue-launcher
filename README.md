@@ -23,7 +23,7 @@ Then the lambda will start the AWS Glue job with its required parameters.
 |ENVIRONMENT | The environment the application is running in. 
 |APPLICATION | The name of the application ie. glue_launcher_lambda |
 |LOG_LEVEL   | INFO or Debug |
-|JOB_QUEUE_DEPENDENCIES | Batch job queue names to check for running jobs |
+|JOB_QUEUE_DEPENDENCIES_ARN_LIST | Batch job queue ARNs to check for running jobs |
 |ETL_GLUE_JOB_NAME | Name of the target AWS Glue job to fire ie. etl_glue_job|
 |MANIFEST_MISMATCHED_TIMESTAMPS_TABLE_NAME | Table name for manifest mismatches ie. mismatches |
 |MANIFEST_MISSING_IMPORTS_TABLE_NAME | Table name for missing imports ie. missing_imports |

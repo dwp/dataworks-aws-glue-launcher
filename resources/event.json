@@ -1,0 +1,11 @@
+{
+  "version": "0",
+  "detail-type": "Batch Job State Change",
+  "source": "aws.batch",
+  "detail": {
+    "jobName": "batch_job_name",
+    "jobQueue": "batch_job_queue_name",
+    "status": "STARTING",
+    },
+  }
+}

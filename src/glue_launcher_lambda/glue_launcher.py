@@ -36,7 +36,7 @@ JOB_STARTED_AT_KEY = ("startedAt", "Started at")
 JOB_STOPPED_AT_KEY = ("stoppedAt", "Stopped at")
 OPTIONAL_TIME_KEYS = [JOB_CREATED_AT_KEY, JOB_STARTED_AT_KEY, JOB_STOPPED_AT_KEY]
 
-SQL_LOCATION = "/sql"
+SQL_LOCATION = "src/glue_launcher_lambda/sql"
 
 boto_client_config = botocore.config.Config(
     max_pool_connections=100, retries={"max_attempts": 10, "mode": "standard"}
@@ -112,8 +112,8 @@ def get_parameters():
     if "LOG_LEVEL" in os.environ:
         _args.log_level = os.environ["LOG_LEVEL"]
 
-    if "JOB_QUEUE_DEPENDENCIES" in os.environ:
-        dependencies = os.environ["JOB_QUEUE_DEPENDENCIES"].split(",")
+    if "JOB_QUEUE_DEPENDENCIES_ARN_LIST" in os.environ:
+        dependencies = os.environ["JOB_QUEUE_DEPENDENCIES_ARN_LIST"].split(",")
         _args.job_queue_dependencies = dependencies
 
     if "ETL_GLUE_JOB_NAME" in os.environ:
@@ -125,10 +125,10 @@ def get_parameters():
         ]
 
     if "MANIFEST_MISSING_IMPORTS_TABLE_NAME" in os.environ:
-        _args.missing_imports_table_name = os.environ["MANIFEST_MISSING_IMPORTS_TABLE_NAME"]
+        _args.manifest_missing_imports_table_name = os.environ["MANIFEST_MISSING_IMPORTS_TABLE_NAME"]
 
     if "MANIFEST_MISSING_EXPORTS_TABLE_NAME" in os.environ:
-        _args.missing_exports_table_name = os.environ["MANIFEST_MISSING_EXPORTS_TABLE_NAME"]
+        _args.manifest_missing_exports_table_name = os.environ["MANIFEST_MISSING_EXPORTS_TABLE_NAME"]
 
     if "MANIFEST_COUNTS_PARQUET_TABLE_NAME" in os.environ:
         _args.manifest_counts_parquet_table_name = os.environ[
@@ -258,7 +258,7 @@ def generate_ms_epoch_from_timestamp(formatted_timestamp_string, minutes_to_add=
     timestamp_string -- the timestamp as a string formatted to %Y-%m-%dT%H:%M:%S.%f%z
     minutes_to_add -- if any minutes are to be added to the time, set to greater than 0
     """
-    timestamp = datetime.strptime(formatted_timestamp_string, "%Y-%m-%dT%H:%M:%S.%f")
+    timestamp = datetime.strptime(str(formatted_timestamp_string), "%Y-%m-%dT%H:%M:%S.%f")
     if minutes_to_add > 0:
         timestamp = timestamp + timedelta(minutes=minutes_to_add)
 
@@ -299,7 +299,7 @@ def check_running_batch_tasks(job_queue, batch_client):
     return operational_tasks
 
 
-def fetch_table_creation_sql_files(file_path, args=None):
+def fetch_table_creation_sql_files(file_path, args):
     with open(os.path.join(file_path, "create-parquet-table.sql"), "r") as f:
         base_create_parquet_query = f.read()
 
@@ -344,7 +344,7 @@ def fetch_table_creation_sql_files(file_path, args=None):
     return tables
 
 
-def fetch_table_drop_sql_file(file_path, args=None):
+def fetch_table_drop_sql_file(file_path, args):
     with open(os.path.join(file_path, "drop-table.sql"), "r") as f:
         base_drop_query = f.read()
         return base_drop_query
@@ -492,6 +492,8 @@ def handler(event, context):
     args = get_parameters()
     logger = setup_logging(args.log_level)
 
+    logger.info(f'Working from {os.getcwd()}')
+
     dumped_event = get_escaped_json_string(event)
     logger.info(f'Event", "event": {dumped_event}, "mode": "handler')
 
@@ -526,9 +528,9 @@ def handler(event, context):
 
     logger.info(f"Operational tasks is '{operational_tasks}', continuing to create Athena tables")
 
-    tables = fetch_table_creation_sql_files(SQL_LOCATION)
+    tables = fetch_table_creation_sql_files(SQL_LOCATION, args)
 
-    base_drop_query = fetch_table_drop_sql_file(SQL_LOCATION)
+    base_drop_query = fetch_table_drop_sql_file(SQL_LOCATION, args)
 
     recreate_sql_tables(tables, base_drop_query, get_athena_client())
     logger.info(f"Created Athena tables. Launching glue job '{args.etl_glue_job_name}' now")

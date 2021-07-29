@@ -125,10 +125,10 @@ def get_parameters():
         ]
 
     if "MANIFEST_MISSING_IMPORTS_TABLE_NAME" in os.environ:
-        _args.missing_imports_table_name = os.environ["MISSING_IMPORTS_TABLE_NAME"]
+        _args.missing_imports_table_name = os.environ["MANIFEST_MISSING_IMPORTS_TABLE_NAME"]
 
     if "MANIFEST_MISSING_EXPORTS_TABLE_NAME" in os.environ:
-        _args.missing_exports_table_name = os.environ["MISSING_EXPORTS_TABLE_NAME"]
+        _args.missing_exports_table_name = os.environ["MANIFEST_MISSING_EXPORTS_TABLE_NAME"]
 
     if "MANIFEST_COUNTS_PARQUET_TABLE_NAME" in os.environ:
         _args.manifest_counts_parquet_table_name = os.environ[

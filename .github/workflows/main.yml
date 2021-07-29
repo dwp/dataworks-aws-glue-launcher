@@ -1,0 +1,69 @@
+name: Master
+
+on:
+  push:
+    branches:
+      - master
+    paths-ignore:
+      - '*.md'
+      - '.gitignore'
+
+jobs:
+  get-publish-version:
+    runs-on: ubuntu-latest
+    outputs:
+      publish-version: ${{ steps.get-publish-version.outputs.publish-version }}
+    steps:
+      - name: Get publish version
+        id: get-publish-version
+        run: |
+          LATEST_VERSION=$(curl --silent "https://api.github.com/repos/${{ github.repository }}/releases/latest" | grep '"tag_name":' | sed -E 's/.*"([^"]+)".*/\1/')
+          [  -z "$LATEST_VERSION" ] && LATEST_VERSION="0.0.0"
+          VERSION=$(echo $LATEST_VERSION | awk -F. '{$NF = $NF + 1;} 1' | sed 's/ /./g')
+          echo "::set-output name=publish-version::${VERSION}"
+
+  publish-github-release:
+    runs-on: ubuntu-latest
+    needs: get-publish-version
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@master
+
+      - name: Generate artifacts directory
+        run: mkdir artifacts
+
+      - name: Set up Python 3.8
+        uses: actions/setup-python@v1
+        with:
+          python-version: 3.8
+
+      - name: Install dependencies
+        run: |
+          pip install -r requirements.txt -t artifacts
+          cp src/*.py artifacts/
+
+      - name: Produce zip
+        working-directory: ./artifacts
+        run: zip -qq -r ../glue-launcher-${{ needs.get-publish-version.outputs.publish-version }}.zip *
+
+      - name: Create GitHub Release
+        id: create_release
+        uses: actions/create-release@latest
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          tag_name: ${{ needs.get-publish-version.outputs.publish-version }}
+          release_name: Release ${{ needs.get-publish-version.outputs.publish-version }}
+          draft: false
+          prerelease: false
+
+      - name: Upload Release Asset
+        id: upload-release-asset
+        uses: actions/upload-release-asset@v1
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          upload_url: ${{ steps.create_release.outputs.upload_url }}
+          asset_path: glue-launcher-${{ needs.get-publish-version.outputs.publish-version }}.zip
+          asset_name: glue-launcher-${{ needs.get-publish-version.outputs.publish-version }}.zip
+          asset_content_type: application/zip

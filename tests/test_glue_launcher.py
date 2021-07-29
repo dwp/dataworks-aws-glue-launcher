@@ -380,7 +380,9 @@ class TestRetriever(unittest.TestCase):
 
         result = glue_launcher.poll_athena_query_status("12", athena_client_mock)
 
-        athena_client_mock.get_query_execution.assert_called_once_with(QueryExecutionId="12")
+        athena_client_mock.get_query_execution.assert_called_once_with(
+            QueryExecutionId="12"
+        )
 
         assert result == "SUCCEEDED", f"Result '{result}' is not SUCCEEDED."
 

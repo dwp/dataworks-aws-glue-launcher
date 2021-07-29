@@ -36,7 +36,7 @@ JOB_STARTED_AT_KEY = ("startedAt", "Started at")
 JOB_STOPPED_AT_KEY = ("stoppedAt", "Stopped at")
 OPTIONAL_TIME_KEYS = [JOB_CREATED_AT_KEY, JOB_STARTED_AT_KEY, JOB_STOPPED_AT_KEY]
 
-SQL_LOCATION = "sql"
+SQL_LOCATION = "/sql"
 
 boto_client_config = botocore.config.Config(
     max_pool_connections=100, retries={"max_attempts": 10, "mode": "standard"}
@@ -508,6 +508,8 @@ def handler(event, context):
         )
         sys.exit(0)
 
+    logger.info(f"Job status is a finished job status '{job_status}'")
+
     batch_client = get_batch_client()
 
     operational_tasks = 0
@@ -522,11 +524,14 @@ def handler(event, context):
         )
         sys.exit(0)
 
+    logger.info(f"Operational tasks is '{operational_tasks}', continuing to create Athena tables")
+
     tables = fetch_table_creation_sql_files(SQL_LOCATION)
 
     base_drop_query = fetch_table_drop_sql_file(SQL_LOCATION)
 
     recreate_sql_tables(tables, base_drop_query, get_athena_client())
+    logger.info(f"Created Athena tables. Launching glue job '{args.etl_glue_job_name}' now")
 
     execute_manifest_glue_job(
         args.etl_glue_job_name,
@@ -539,6 +544,7 @@ def handler(event, context):
         args.manifest_s3_input_location_export_historic,
         get_glue_client(),
     )
+    logger.info("Launched Glue Job - exiting")
 
 
 if __name__ == "__main__":

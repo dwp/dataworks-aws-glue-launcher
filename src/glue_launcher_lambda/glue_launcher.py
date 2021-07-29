@@ -125,10 +125,14 @@ def get_parameters():
         ]
 
     if "MANIFEST_MISSING_IMPORTS_TABLE_NAME" in os.environ:
-        _args.manifest_missing_imports_table_name = os.environ["MANIFEST_MISSING_IMPORTS_TABLE_NAME"]
+        _args.manifest_missing_imports_table_name = os.environ[
+            "MANIFEST_MISSING_IMPORTS_TABLE_NAME"
+        ]
 
     if "MANIFEST_MISSING_EXPORTS_TABLE_NAME" in os.environ:
-        _args.manifest_missing_exports_table_name = os.environ["MANIFEST_MISSING_EXPORTS_TABLE_NAME"]
+        _args.manifest_missing_exports_table_name = os.environ[
+            "MANIFEST_MISSING_EXPORTS_TABLE_NAME"
+        ]
 
     if "MANIFEST_COUNTS_PARQUET_TABLE_NAME" in os.environ:
         _args.manifest_counts_parquet_table_name = os.environ[
@@ -258,7 +262,9 @@ def generate_ms_epoch_from_timestamp(formatted_timestamp_string, minutes_to_add=
     timestamp_string -- the timestamp as a string formatted to %Y-%m-%dT%H:%M:%S.%f%z
     minutes_to_add -- if any minutes are to be added to the time, set to greater than 0
     """
-    timestamp = datetime.strptime(str(formatted_timestamp_string), "%Y-%m-%dT%H:%M:%S.%f")
+    timestamp = datetime.strptime(
+        str(formatted_timestamp_string), "%Y-%m-%dT%H:%M:%S.%f"
+    )
     if minutes_to_add > 0:
         timestamp = timestamp + timedelta(minutes=minutes_to_add)
 
@@ -492,7 +498,7 @@ def handler(event, context):
     args = get_parameters()
     logger = setup_logging(args.log_level)
 
-    logger.debug(f'Working from {os.getcwd()}')
+    logger.debug(f"Working from {os.getcwd()}")
 
     dumped_event = get_escaped_json_string(event)
     logger.info(f'Event", "event": {dumped_event}, "mode": "handler')
@@ -526,14 +532,18 @@ def handler(event, context):
         )
         sys.exit(0)
 
-    logger.info(f"Operational tasks is '{operational_tasks}', continuing to create Athena tables")
+    logger.info(
+        f"Operational tasks is '{operational_tasks}', continuing to create Athena tables"
+    )
 
     tables = fetch_table_creation_sql_files(SQL_LOCATION, args)
 
     base_drop_query = fetch_table_drop_sql_file(SQL_LOCATION, args)
 
     recreate_sql_tables(tables, base_drop_query, get_athena_client())
-    logger.info(f"Created Athena tables. Launching glue job '{args.etl_glue_job_name}' now")
+    logger.info(
+        f"Created Athena tables. Launching glue job '{args.etl_glue_job_name}' now"
+    )
 
     execute_manifest_glue_job(
         args.etl_glue_job_name,

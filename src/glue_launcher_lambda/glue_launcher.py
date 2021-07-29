@@ -287,8 +287,17 @@ def check_running_batch_tasks(job_queue, batch_client):
             jobStatus=status,
         )
         operational_tasks += len(response["jobSummaryList"])
-    return operational_tasks
+        next_token = response.get("nextToken", None)
+        while next_token is not None:
+            response = batch_client.list_jobs(
+                jobQueue=job_queue,
+                jobStatus=status,
+                nextToken=next_token
+            )
+            operational_tasks += len(response["jobSummaryList"])
+            next_token = response.get("nextToken", None)
 
+    return operational_tasks
 
 def fetch_table_creation_sql_files(file_path, args=None):
     with open(os.path.join(file_path, "create-parquet-table.sql"), "r") as f:

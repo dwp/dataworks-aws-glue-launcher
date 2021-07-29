@@ -182,8 +182,10 @@ class TestRetriever(unittest.TestCase):
     def test_batch_tasks_running(self, batch_client_mock):
 
         batch_client_mock.list_jobs.side_effect = [
-            {"jobSummaryList": [1]},
-            {"jobSummaryList": [1, 2]},
+            {"jobSummaryList": [1], "nextToken": "1400"},
+            {"jobSummaryList": [2]},
+            {"jobSummaryList": [1, 2], "nextToken": "1500"},
+            {"jobSummaryList": [2]},
             {"jobSummaryList": [1]},
         ]
 
@@ -193,12 +195,14 @@ class TestRetriever(unittest.TestCase):
 
         status_calls = [
             call(jobQueue="job_queue", jobStatus="PENDING"),
+            call(jobQueue="job_queue", jobStatus="PENDING", nextToken="1400"),
             call(jobQueue="job_queue", jobStatus="RUNNABLE"),
-            call(jobQueue="job_queue", jobStatus="STARTING"),
+            call(jobQueue="job_queue", jobStatus="RUNNABLE", nextToken="1500"),
+            call(jobQueue="job_queue", jobStatus="STARTING")
         ]
         batch_client_mock.list_jobs.assert_has_calls(status_calls, True)
 
-        assert response == 4, "Response is not equal to 4"
+        assert response == 6, "Response is not equal to 6"
 
     @mock.patch("glue_launcher_lambda.glue_launcher.execute_athena_query")
     @mock.patch("glue_launcher_lambda.glue_launcher.logger")

@@ -116,13 +116,13 @@ def get_parameters():
         dependencies = os.environ["JOB_QUEUE_DEPENDENCIES"].split(",")
         _args.job_queue_dependencies = dependencies
 
+    if "ETL_GLUE_JOB_NAME" in os.environ:
+        _args.etl_glue_job_name = os.environ["ETL_GLUE_JOB_NAME"]
+
     if "MANIFEST_MISMATCHED_TIMESTAMPS_TABLE_NAME" in os.environ:
         _args.manifest_mismatched_timestamps_table_name = os.environ[
             "MANIFEST_MISMATCHED_TIMESTAMPS_TABLE_NAME"
         ]
-
-    if "ETL_GLUE_JOB_NAME" in os.environ:
-        _args.etl_glue_job_name = os.environ["ETL_GLUE_JOB_NAME"]
 
     if "MANIFEST_MISSING_IMPORTS_TABLE_NAME" in os.environ:
         _args.missing_imports_table_name = os.environ["MISSING_IMPORTS_TABLE_NAME"]

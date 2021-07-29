@@ -20,24 +20,24 @@ Then the lambda will start the AWS Glue job with its required parameters.
 # Environment variables
 |Property | Value|
 |:---|---:|
-| ENVIRONMENT | The environment the application is running in. 
-| APPLICATION | The name of the application ie. glue_launcher_lambda |
-| LOG_LEVEL   | INFO or Debug |
+|ENVIRONMENT | The environment the application is running in. 
+|APPLICATION | The name of the application ie. glue_launcher_lambda |
+|LOG_LEVEL   | INFO or Debug |
 |JOB_QUEUE_DEPENDENCIES | Batch job queue names to check for running jobs |
-|MISSING_IMPORTS_TABLE_NAME | Table name for missing imports ie. missing_imports |
-|MISSING_EXPORTS_TABLE_NAME | Table name for missing exports ie. missing_exports |
-|COUNTS_TABLE_NAME | Table name for manifest counts ie. counts |
-|MISMATCHED_TIMESTAMPS_TABLE_NAME | Table name for manifest mismatches ie. mismatches |
 |ETL_GLUE_JOB_NAME | Name of the target AWS Glue job to fire ie. etl_glue_job|
-|MANIFEST_S3_INPUT_LOCATION_IMPORT_HISTORIC | |
-|MANIFEST_S3_INPUT_LOCATION_EXPORT_HISTORIC | |
-|MANIFEST_COMPARISON_CUT_OFF_DATE_START | |
-|MANIFEST_COMPARISON_CUT_OFF_DATE_END | |
-|MANIFEST_COMPARISON_MARGIN_OF_ERROR_MINUTES | |
+|MANIFEST_MISMATCHED_TIMESTAMPS_TABLE_NAME | Table name for manifest mismatches ie. mismatches |
+|MANIFEST_MISSING_IMPORTS_TABLE_NAME | Table name for missing imports ie. missing_imports |
+|MANIFEST_MISSING_EXPORTS_TABLE_NAME | Table name for missing exports ie. missing_exports |
+|MANIFEST_COUNTS_PARQUET_TABLE_NAME | Table name for manifest counts ie. counts |
+|MANIFEST_S3_INPUT_LOCATION_IMPORT | S3 prefix for import location |
+|MANIFEST_S3_INPUT_LOCATION_EXPORT | S3 prefix for export location |
+|MANIFEST_COMPARISON_CUT_OFF_DATE_START | Lambda defaults to using previous day midnight. Override with a 'YYYY-MM-DD HH:MM:SS.MMM' |
+|MANIFEST_COMPARISON_CUT_OFF_DATE_END | Lambda defaults to using today midnight. Override with a 'YYYY-MM-DD HH:MM:SS.MMM' |
+|MANIFEST_COMPARISON_MARGIN_OF_ERROR_MINUTES | Margin of error for manifest comparison given in minutes. Default is 2 minutes. |
 |MANIFEST_COMPARISON_SNAPSHOT_TYPE | "full" or "incremental" |
-|MANIFEST_COMPARISON_IMPORT_TYPE | "historic" or "|
-|MANIFEST_S3_INPUT_PARQUET_LOCATION_MISSING_IMPORT | |
-|MANIFEST_S3_INPUT_PARQUET_LOCATION_MISSING_EXPORT | |
-|MANIFEST_S3_INPUT_PARQUET_LOCATION_COUNTS | |
-|MANIFEST_S3_INPUT_PARQUET_LOCATION_MISMATCHED_TIMESTAMPS | |
+|MANIFEST_COMPARISON_IMPORT_TYPE | "historic" or "streaming_main" or "streaming_equality" |
+|MANIFEST_S3_INPUT_PARQUET_LOCATION_MISSING_IMPORT | Full S3 URI to missing import output location|
+|MANIFEST_S3_INPUT_PARQUET_LOCATION_MISSING_EXPORT | Full S3 URI to missing export output location |
+|MANIFEST_S3_INPUT_PARQUET_LOCATION_COUNTS | Full S3 URI to counts output location |
+|MANIFEST_S3_INPUT_PARQUET_LOCATION_MISMATCHED_TIMESTAMPS | Full S3 URI to mismatched timestamps output location |
 |MANIFEST_S3_OUTPUT_LOCATION | Output location on S3 for Athena query outputs |

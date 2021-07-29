@@ -492,7 +492,7 @@ def handler(event, context):
     args = get_parameters()
     logger = setup_logging(args.log_level)
 
-    logger.info(f'Working from {os.getcwd()}')
+    logger.debug(f'Working from {os.getcwd()}')
 
     dumped_event = get_escaped_json_string(event)
     logger.info(f'Event", "event": {dumped_event}, "mode": "handler')

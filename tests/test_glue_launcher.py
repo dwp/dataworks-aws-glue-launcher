@@ -379,14 +379,16 @@ class TestRetriever(unittest.TestCase):
     @mock.patch("glue_launcher_lambda.glue_launcher.logger")
     @mock.patch("glue_launcher_lambda.glue_launcher.get_athena_client")
     def test_athena_query_status_polling(self, athena_client_mock, mock_logger):
-        athena_client_return = {"QueryExecution": {"Status": {"State": "SUCCEEDED"}}}
-        athena_client_mock.get_query_execution.return_value = athena_client_return
+        athena_client_return = [{"QueryExecution": {"Status": {"State": "JUNK"}}}, {"QueryExecution": {"Status": {"State": "SUCCEEDED"}}}]
+        athena_client_mock.get_query_execution.side_effect = athena_client_return
 
         result = glue_launcher.poll_athena_query_status("12", athena_client_mock)
 
-        athena_client_mock.get_query_execution.assert_called_once_with(
-            QueryExecutionId="12"
-        )
+        get_query_exec_calls = [
+            call(QueryExecutionId="12"),
+            call(QueryExecutionId="12")
+        ]
+        athena_client_mock.get_query_execution.assert_has_calls(get_query_exec_calls)
 
         assert result == "SUCCEEDED", f"Result '{result}' is not SUCCEEDED."
 

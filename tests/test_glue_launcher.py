@@ -372,6 +372,18 @@ class TestRetriever(unittest.TestCase):
         athena_client_mock.get_query_results.assert_called_with(QueryExecutionId="12")
         poll_athena_mock.assert_called_with("12", athena_client_mock)
 
+    @mock.patch("glue_launcher_lambda.glue_launcher.logger")
+    @mock.patch("glue_launcher_lambda.glue_launcher.get_athena_client")
+    def test_athena_query_status_polling(self, athena_client_mock, mock_logger):
+        athena_client_return = {"QueryExecution": {"Status": {"State": "SUCCEEDED"}}}
+        athena_client_mock.get_query_execution.return_value = athena_client_return
+
+        result = glue_launcher.poll_athena_query_status("12", athena_client_mock)
+
+        athena_client_mock.get_query_execution.assert_called_once_with(QueryExecutionId="12")
+
+        assert result == "SUCCEEDED", f"Result '{result}' is not SUCCEEDED."
+
     @mock.patch("glue_launcher_lambda.glue_launcher.get_today_midnight")
     def test_yesterday_midnight(self, midnight_mock):
         midnight_mock.return_value = datetime.strptime(

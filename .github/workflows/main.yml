@@ -40,7 +40,8 @@ jobs:
       - name: Install dependencies
         run: |
           pip install -r requirements.txt -t artifacts
-          cp src/*.py artifacts/
+          cp src/glue_laumcher_lambda/*.py artifacts/
+          cp src/glue_laumcher_lambda/sql/*.sql artifacts/
 
       - name: Produce zip
         working-directory: ./artifacts

@@ -41,7 +41,7 @@ jobs:
         run: |
           pip install -r requirements.txt -t artifacts
           cp src/glue_launcher_lambda/*.py artifacts/
-          cp src/glue_launcher_lambda/sql/*.sql artifacts/
+          cp -R src/glue_launcher_lambda/sql/ artifacts/sql
 
       - name: Produce zip
         working-directory: ./artifacts

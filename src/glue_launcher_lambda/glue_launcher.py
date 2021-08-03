@@ -36,7 +36,7 @@ JOB_STARTED_AT_KEY = ("startedAt", "Started at")
 JOB_STOPPED_AT_KEY = ("stoppedAt", "Stopped at")
 OPTIONAL_TIME_KEYS = [JOB_CREATED_AT_KEY, JOB_STARTED_AT_KEY, JOB_STOPPED_AT_KEY]
 
-SQL_LOCATION = "src/glue_launcher_lambda/sql"
+SQL_LOCATION = "sql"
 
 boto_client_config = botocore.config.Config(
     max_pool_connections=100, retries={"max_attempts": 10, "mode": "standard"}
@@ -498,7 +498,7 @@ def handler(event, context):
     args = get_parameters()
     logger = setup_logging(args.log_level)
 
-    logger.debug(f"Working from {os.getcwd()}")
+    logger.debug(f"Working from '{os.getcwd()}'")
 
     dumped_event = get_escaped_json_string(event)
     logger.info(f'Event", "event": {dumped_event}, "mode": "handler')

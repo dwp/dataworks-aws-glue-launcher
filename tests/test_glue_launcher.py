@@ -398,10 +398,10 @@ class TestRetriever(unittest.TestCase):
     @mock.patch("glue_launcher_lambda.glue_launcher.get_today_midnight")
     def test_yesterday_midnight(self, midnight_mock):
         midnight_mock.return_value = datetime.strptime(
-            "2021-07-27 00:00:00", "%Y-%m-%d %H:%M:%S"
+            "2021-07-27T00:00:00.000000", "%Y-%m-%dT%H:%M:%S.%f"
         )
 
-        expected = "2021-07-26 00:00:00"
+        expected = "2021-07-26T00:00:00.000000"
         actual = str(glue_launcher.get_previous_midnight())
         assert (
             expected == actual

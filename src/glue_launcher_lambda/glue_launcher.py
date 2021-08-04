@@ -255,13 +255,15 @@ def get_and_validate_job_details(message):
     return detail_dict
 
 
-def generate_ms_epoch_from_timestamp(formatted_timestamp_string, minutes_to_add=0):
+def generate_ms_epoch_from_timestamp(timestamp_string, minutes_to_add=0):
     """Returns the 1970 epoch as a number from the given timestamp.
 
     Keyword arguments:
-    timestamp_string -- the timestamp as a string formatted to %Y-%m-%dT%H:%M:%S.%f%z
+    timestamp_string -- the timestamp as a string formatted as YYYY-MM-DD HH:MM:SS
     minutes_to_add -- if any minutes are to be added to the time, set to greater than 0
     """
+
+    formatted_timestamp_string = timestamp_string.strftime("%Y-%m-%dT%H:%M:%S.%f")
     timestamp = datetime.strptime(
         str(formatted_timestamp_string), "%Y-%m-%dT%H:%M:%S.%f"
     )

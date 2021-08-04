@@ -44,24 +44,24 @@ boto_client_config = botocore.config.Config(
     max_pool_connections=100, retries={"max_attempts": 10, "mode": "standard"}
 )
 
+def get_current_date():
+    return datetime.utcnow()
 
-def convert_time_to_format(time_string):
+
+def convert_time_to_script_time_format(time_string):
     """
     Convert time to script requirements from human readable
     time_string - Format of input YYYY-MM-DD HH:MM:SS allowed
     """
-    datetime_object = datetime.strptime(time_string, TIME_FORMAT_UNFORMATTED)
-    return datetime_object.strftime(TIME_FORMAT)
+    return datetime.strptime(time_string, TIME_FORMAT_UNFORMATTED)
 
 
 def get_today_midnight():
-    return convert_time_to_format(
-        str(datetime.utcnow().replace(hour=0, minute=0, second=0, microsecond=0))
-    )
+    return get_current_date().replace(hour=0, minute=0, second=0, microsecond=0)
 
 
 def get_previous_midnight():
-    return convert_time_to_format(str(get_today_midnight() - timedelta(days=1)))
+    return get_today_midnight() - timedelta(days=1)
 
 
 def setup_logging(logger_level):
@@ -169,9 +169,9 @@ def get_parameters():
         ):
             _args.manifest_comparison_cut_off_date_start = get_previous_midnight()
         else:
-            _args.manifest_comparison_cut_off_date_start = convert_time_to_format(
-                os.environ["MANIFEST_COMPARISON_CUT_OFF_DATE_START"]
-            )
+            _args.manifest_comparison_cut_off_date_start = convert_time_to_script_time_format(os.environ[
+                "MANIFEST_COMPARISON_CUT_OFF_DATE_START"
+            ])
     else:
         _args.manifest_comparison_cut_off_date_start = get_previous_midnight()
 
@@ -182,9 +182,9 @@ def get_parameters():
         ):
             _args.manifest_comparison_cut_off_date_end = get_today_midnight()
         else:
-            _args.manifest_comparison_cut_off_date_end = convert_time_to_format(
-                os.environ["MANIFEST_COMPARISON_CUT_OFF_DATE_END"]
-            )
+            _args.manifest_comparison_cut_off_date_end = convert_time_to_script_time_format(os.environ[
+                "MANIFEST_COMPARISON_CUT_OFF_DATE_END"
+            ])
     else:
         _args.manifest_comparison_cut_off_date_end = get_today_midnight()
 
@@ -268,17 +268,15 @@ def get_and_validate_job_details(message):
     return detail_dict
 
 
-def generate_ms_epoch_from_timestamp(formatted_timestamp_string, minutes_to_add=0):
+def generate_ms_epoch_from_timestamp(datetime_object, minutes_to_add=0):
     """Returns the 1970 epoch as a number from the given timestamp.
 
     Keyword arguments:
-    timestamp_string -- the timestamp as a string formatted as YYYY-MM-DD HH:MM:SS
+    datetime_object -- datetime object
     minutes_to_add -- if any minutes are to be added to the time, set to greater than 0
     """
 
-    timestamp = datetime.strptime(
-        str(formatted_timestamp_string), "%Y-%m-%dT%H:%M:%S.%f"
-    )
+    timestamp = datetime_object.strftime(TIME_FORMAT)
     if minutes_to_add > 0:
         timestamp = timestamp + timedelta(minutes=minutes_to_add)
 

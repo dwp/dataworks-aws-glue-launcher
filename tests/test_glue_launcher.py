@@ -401,7 +401,9 @@ class TestRetriever(unittest.TestCase):
             "2021-07-27T00:00:00.000000", "%Y-%m-%dT%H:%M:%S.%f"
         )
 
-        expected = datetime.strptime("2021-07-26T00:00:00.000000", "%Y-%m-%dT%H:%M:%S.%f")
+        expected = datetime.strptime(
+            "2021-07-26T00:00:00.000000", "%Y-%m-%dT%H:%M:%S.%f"
+        )
         actual = glue_launcher.get_previous_midnight()
         assert (
             expected == actual
@@ -413,10 +415,12 @@ class TestRetriever(unittest.TestCase):
             "2021-07-27T05:38:54.000000", "%Y-%m-%dT%H:%M:%S.%f"
         )
 
-        expected = datetime.strptime("2021-07-27T00:00:00.000000", "%Y-%m-%dT%H:%M:%S.%f")
+        expected = datetime.strptime(
+            "2021-07-27T00:00:00.000000", "%Y-%m-%dT%H:%M:%S.%f"
+        )
         actual = glue_launcher.get_today_midnight()
         assert (
-                expected == actual
+            expected == actual
         ), f"Expected '{expected}' does not match actual '{actual}'"
 
 

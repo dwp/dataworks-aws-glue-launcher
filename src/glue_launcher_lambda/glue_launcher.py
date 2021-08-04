@@ -153,14 +153,14 @@ def get_parameters():
             "MANIFEST_COUNTS_PARQUET_TABLE_NAME"
         ]
 
-    if "MANIFEST_S3_INPUT_LOCATION_IMPORT_HISTORIC" in os.environ:
-        _args.manifest_s3_input_location_import_historic = os.environ[
-            "MANIFEST_S3_INPUT_LOCATION_IMPORT_HISTORIC"
+    if "MANIFEST_S3_INPUT_LOCATION_IMPORT" in os.environ:
+        _args.manifest_s3_input_location_import = os.environ[
+            "MANIFEST_S3_INPUT_LOCATION_IMPORT"
         ]
 
-    if "MANIFEST_S3_INPUT_LOCATION_EXPORT_HISTORIC" in os.environ:
+    if "MANIFEST_S3_INPUT_LOCATION_EXPORT" in os.environ:
         _args.manifest_s3_input_location_export_historic = os.environ[
-            "MANIFEST_S3_INPUT_LOCATION_EXPORT_HISTORIC"
+            "MANIFEST_S3_INPUT_LOCATION_EXPORT"
         ]
 
     if "MANIFEST_COMPARISON_CUT_OFF_DATE_START" in os.environ:
@@ -568,8 +568,8 @@ def handler(event, context):
         args.manifest_comparison_margin_of_error_minutes,
         args.manifest_comparison_snapshot_type,
         args.manifest_comparison_import_type,
-        args.manifest_s3_input_location_import_historic,
-        args.manifest_s3_input_location_export_historic,
+        args.manifest_s3_input_location_import,
+        args.manifest_s3_input_location_export,
         get_glue_client(),
     )
     logger.info("Launched Glue Job - exiting")

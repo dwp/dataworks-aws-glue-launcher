@@ -445,7 +445,6 @@ class TestRetriever(unittest.TestCase):
             expected == actual
         ), f"Expected '{expected}' does not match actual '{actual}'"
 
-
     def test_generate_ms_epoch(self):
         datetime_obj = datetime.strptime(
             "2021-07-27T05:38:54.000000", "%Y-%m-%dT%H:%M:%S.%f"
@@ -454,9 +453,8 @@ class TestRetriever(unittest.TestCase):
         expected = 1627364334000
         actual = glue_launcher.generate_ms_epoch_from_timestamp(datetime_obj)
         assert (
-                expected == actual
+            expected == actual
         ), f"Expected '{expected}' does not match actual '{actual}'"
-
 
     def test_generate_ms_epoch_additional_minutes(self):
         datetime_obj = datetime.strptime(
@@ -466,8 +464,9 @@ class TestRetriever(unittest.TestCase):
         expected = 1627364454000
         actual = glue_launcher.generate_ms_epoch_from_timestamp(datetime_obj, 2)
         assert (
-                expected == actual
+            expected == actual
         ), f"Expected '{expected}' does not match actual '{actual}'"
+
 
 if __name__ == "__main__":
     unittest.main()

@@ -44,6 +44,7 @@ boto_client_config = botocore.config.Config(
     max_pool_connections=100, retries={"max_attempts": 10, "mode": "standard"}
 )
 
+
 def convert_time_to_format(time_string):
     """
     Convert time to script requirements from human readable
@@ -52,8 +53,11 @@ def convert_time_to_format(time_string):
     datetime_object = datetime.strptime(time_string, TIME_FORMAT_UNFORMATTED)
     return datetime_object.strftime(TIME_FORMAT)
 
+
 def get_today_midnight():
-    return convert_time_to_format(str(datetime.utcnow().replace(hour=0, minute=0, second=0, microsecond=0)))
+    return convert_time_to_format(
+        str(datetime.utcnow().replace(hour=0, minute=0, second=0, microsecond=0))
+    )
 
 
 def get_previous_midnight():
@@ -165,9 +169,9 @@ def get_parameters():
         ):
             _args.manifest_comparison_cut_off_date_start = get_previous_midnight()
         else:
-            _args.manifest_comparison_cut_off_date_start = convert_time_to_format(os.environ[
-                "MANIFEST_COMPARISON_CUT_OFF_DATE_START"
-            ])
+            _args.manifest_comparison_cut_off_date_start = convert_time_to_format(
+                os.environ["MANIFEST_COMPARISON_CUT_OFF_DATE_START"]
+            )
     else:
         _args.manifest_comparison_cut_off_date_start = get_previous_midnight()
 
@@ -178,9 +182,9 @@ def get_parameters():
         ):
             _args.manifest_comparison_cut_off_date_end = get_today_midnight()
         else:
-            _args.manifest_comparison_cut_off_date_end = convert_time_to_format(os.environ[
-                "MANIFEST_COMPARISON_CUT_OFF_DATE_END"
-            ])
+            _args.manifest_comparison_cut_off_date_end = convert_time_to_format(
+                os.environ["MANIFEST_COMPARISON_CUT_OFF_DATE_END"]
+            )
     else:
         _args.manifest_comparison_cut_off_date_end = get_today_midnight()
 

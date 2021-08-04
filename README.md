@@ -31,8 +31,8 @@ Then the lambda will start the AWS Glue job with its required parameters.
 |MANIFEST_COUNTS_PARQUET_TABLE_NAME | Table name for manifest counts ie. counts |
 |MANIFEST_S3_INPUT_LOCATION_IMPORT | S3 prefix for import location |
 |MANIFEST_S3_INPUT_LOCATION_EXPORT | S3 prefix for export location |
-|MANIFEST_COMPARISON_CUT_OFF_DATE_START | Lambda defaults to using previous day midnight. Override with a 'YYYY-MM-DD HH:MM:SS.MMM' |
-|MANIFEST_COMPARISON_CUT_OFF_DATE_END | Lambda defaults to using today midnight. Override with a 'YYYY-MM-DD HH:MM:SS.MMM' |
+|MANIFEST_COMPARISON_CUT_OFF_DATE_START | Lambda defaults to using previous day midnight. Override with a 'YYYY-MM-DD HH:MM:SS' |
+|MANIFEST_COMPARISON_CUT_OFF_DATE_END | Lambda defaults to using today midnight. Override with a 'YYYY-MM-DD HH:MM:SS' |
 |MANIFEST_COMPARISON_MARGIN_OF_ERROR_MINUTES | Margin of error for manifest comparison given in minutes. Default is 2 minutes. |
 |MANIFEST_COMPARISON_SNAPSHOT_TYPE | "full" or "incremental" |
 |MANIFEST_COMPARISON_IMPORT_TYPE | "historic" or "streaming_main" or "streaming_equality" |

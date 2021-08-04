@@ -398,11 +398,27 @@ class TestRetriever(unittest.TestCase):
     @mock.patch("glue_launcher_lambda.glue_launcher.get_today_midnight")
     def test_yesterday_midnight(self, midnight_mock):
         midnight_mock.return_value = datetime.strptime(
-            "2021-07-27 00:00:00", "%Y-%m-%d %H:%M:%S"
+            "2021-07-27T00:00:00.000000", "%Y-%m-%dT%H:%M:%S.%f"
         )
 
-        expected = "2021-07-26 00:00:00"
-        actual = str(glue_launcher.get_previous_midnight())
+        expected = datetime.strptime(
+            "2021-07-26T00:00:00.000000", "%Y-%m-%dT%H:%M:%S.%f"
+        )
+        actual = glue_launcher.get_previous_midnight()
+        assert (
+            expected == actual
+        ), f"Expected '{expected}' does not match actual '{actual}'"
+
+    @mock.patch("glue_launcher_lambda.glue_launcher.get_current_date")
+    def test_midnight(self, current_date_mock):
+        current_date_mock.return_value = datetime.strptime(
+            "2021-07-27T05:38:54.000000", "%Y-%m-%dT%H:%M:%S.%f"
+        )
+
+        expected = datetime.strptime(
+            "2021-07-27T00:00:00.000000", "%Y-%m-%dT%H:%M:%S.%f"
+        )
+        actual = glue_launcher.get_today_midnight()
         assert (
             expected == actual
         ), f"Expected '{expected}' does not match actual '{actual}'"

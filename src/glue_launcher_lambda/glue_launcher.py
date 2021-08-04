@@ -281,11 +281,10 @@ def generate_ms_epoch_from_timestamp(datetime_object, minutes_to_add=0):
     minutes_to_add -- if any minutes are to be added to the time, set to greater than 0
     """
 
-    timestamp = datetime_object.strftime(TIME_FORMAT)
     if minutes_to_add > 0:
-        timestamp = timestamp + timedelta(minutes=minutes_to_add)
+        datetime_object = datetime_object + timedelta(minutes=minutes_to_add)
 
-    return int((timestamp - datetime(1970, 1, 1)).total_seconds() * 1000.0)
+    return int((datetime_object - datetime(1970, 1, 1)).total_seconds() * 1000.0)
 
 
 def get_batch_client():

@@ -296,7 +296,7 @@ def get_athena_client():
 
 
 def get_glue_client():
-    return boto3.service("glue", config=boto_client_config)
+    return boto3.client("glue", config=boto_client_config)
 
 
 def check_running_batch_tasks(job_queue, batch_client):

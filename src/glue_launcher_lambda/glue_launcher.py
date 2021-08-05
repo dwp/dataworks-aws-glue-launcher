@@ -159,7 +159,7 @@ def get_parameters():
         ]
 
     if "MANIFEST_S3_INPUT_LOCATION_EXPORT" in os.environ:
-        _args.manifest_s3_input_location_export_historic = os.environ[
+        _args.manifest_s3_input_location_export = os.environ[
             "MANIFEST_S3_INPUT_LOCATION_EXPORT"
         ]
 

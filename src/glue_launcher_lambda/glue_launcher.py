@@ -311,7 +311,9 @@ def check_running_batch_tasks(job_queue, batch_client):
         )
 
         operational_tasks += len(response["jobSummaryList"])
-        logger.info(f'Listing running jobs, "job_queue": {job_queue}, "status_check": {status}, "operational_tasks": {operational_tasks}')
+        logger.info(
+            f'Listing running jobs, "job_queue": {job_queue}, "status_check": {status}, "operational_tasks": {operational_tasks}'
+        )
 
         next_token = response.get("nextToken", None)
         while next_token is not None:
@@ -319,7 +321,9 @@ def check_running_batch_tasks(job_queue, batch_client):
                 jobQueue=job_queue, jobStatus=status, nextToken=next_token
             )
             operational_tasks += len(response["jobSummaryList"])
-            logger.info(f'Listing running jobs of tokenised page, "job_queue": {job_queue}, "status_check": {status}, "operational_tasks": {operational_tasks}')
+            logger.info(
+                f'Listing running jobs of tokenised page, "job_queue": {job_queue}, "status_check": {status}, "operational_tasks": {operational_tasks}'
+            )
 
             next_token = response.get("nextToken", None)
 

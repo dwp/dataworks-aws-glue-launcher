@@ -33,7 +33,7 @@ args = argparse.Namespace()
 args.log_level = "INFO"
 args.application = "glue_launcher"
 args.environment = "development"
-args.job_queue_dependencies = ["testqueue","queuetest"]
+args.job_queue_dependencies = ["testqueue", "queuetest"]
 
 # Fetch table values
 args.etl_glue_job_name = "jobName"
@@ -476,7 +476,6 @@ class TestRetriever(unittest.TestCase):
             expected == actual
         ), f"Expected '{expected}' does not match actual '{actual}'"
 
-
     @mock.patch("glue_launcher_lambda.glue_launcher.check_running_batch_tasks")
     @mock.patch("glue_launcher_lambda.glue_launcher.get_batch_client")
     @mock.patch("glue_launcher_lambda.glue_launcher.get_and_validate_job_details")
@@ -484,20 +483,26 @@ class TestRetriever(unittest.TestCase):
     @mock.patch("glue_launcher_lambda.glue_launcher.logger")
     @mock.patch("glue_launcher_lambda.glue_launcher.setup_logging")
     @mock.patch("glue_launcher_lambda.glue_launcher.get_parameters")
-    def test_handler_flow_jobs_in_queue(self,
-                                        parameters_mock,
-                                        setup_logging,
-                                        logger,
-                                        dumped_event,
-                                        job_details_validator,
-                                        batch_mock,
-                                        running_batch_tasks):
+    def test_handler_flow_jobs_in_queue(
+        self,
+        parameters_mock,
+        setup_logging,
+        logger,
+        dumped_event,
+        job_details_validator,
+        batch_mock,
+        running_batch_tasks,
+    ):
 
         batch_mock.return_value = MagicMock()
 
         parameters_mock.return_value = args
         dumped_event.return_value = "{}"
-        job_details_validator.return_value = {"jobName": "job", "status": "SUCCEEDED", "jobQueue": "testqueue"}
+        job_details_validator.return_value = {
+            "jobName": "job",
+            "status": "SUCCEEDED",
+            "jobQueue": "testqueue",
+        }
 
         running_batch_tasks.side_effect = [1, 3]
 
@@ -505,7 +510,7 @@ class TestRetriever(unittest.TestCase):
 
         calls = [
             call("testqueue", batch_mock.return_value),
-            call("queuetest", batch_mock.return_value)
+            call("queuetest", batch_mock.return_value),
         ]
 
         with pytest.raises(SystemExit) as pytest_wrapped_e:
@@ -514,7 +519,6 @@ class TestRetriever(unittest.TestCase):
         assert pytest_wrapped_e.type == SystemExit
         assert pytest_wrapped_e.value.code == 0
         running_batch_tasks.assert_has_calls(calls)
-
 
     @mock.patch("glue_launcher_lambda.glue_launcher.generate_ms_epoch_from_timestamp")
     @mock.patch("glue_launcher_lambda.glue_launcher.execute_manifest_glue_job")
@@ -530,21 +534,23 @@ class TestRetriever(unittest.TestCase):
     @mock.patch("glue_launcher_lambda.glue_launcher.logger")
     @mock.patch("glue_launcher_lambda.glue_launcher.setup_logging")
     @mock.patch("glue_launcher_lambda.glue_launcher.get_parameters")
-    def test_handler_flow_no_jobs_in_queue(self,
-                                        parameters_mock,
-                                        setup_logging,
-                                        logger,
-                                        dumped_event,
-                                        job_details_validator,
-                                        batch_client_mock,
-                                        athena_mock,
-                                        glue_mock,
-                                        running_batch_tasks,
-                                        fetch_sql,
-                                        drop_sql,
-                                        recreate_tables,
-                                        execute_glue,
-                                        epoch_mock):
+    def test_handler_flow_no_jobs_in_queue(
+        self,
+        parameters_mock,
+        setup_logging,
+        logger,
+        dumped_event,
+        job_details_validator,
+        batch_client_mock,
+        athena_mock,
+        glue_mock,
+        running_batch_tasks,
+        fetch_sql,
+        drop_sql,
+        recreate_tables,
+        execute_glue,
+        epoch_mock,
+    ):
 
         batch_client_mock.return_value = MagicMock()
         athena_mock.return_value = MagicMock()
@@ -552,7 +558,11 @@ class TestRetriever(unittest.TestCase):
 
         parameters_mock.return_value = args
         dumped_event.return_value = "{}"
-        job_details_validator.return_value = {"jobName": "job", "status": "SUCCEEDED", "jobQueue": "testqueue"}
+        job_details_validator.return_value = {
+            "jobName": "job",
+            "status": "SUCCEEDED",
+            "jobQueue": "testqueue",
+        }
 
         running_batch_tasks.side_effect = [0, 0]
 
@@ -560,7 +570,7 @@ class TestRetriever(unittest.TestCase):
 
         check_batch_calls = [
             call("testqueue", batch_client_mock.return_value),
-            call("queuetest", batch_client_mock.return_value)
+            call("queuetest", batch_client_mock.return_value),
         ]
 
         fetch_sql.return_value = ["tables"]
@@ -573,7 +583,9 @@ class TestRetriever(unittest.TestCase):
 
         fetch_sql.assert_called_with("sql", parameters_mock.return_value)
         drop_sql.assert_called_with("sql", parameters_mock.return_value)
-        recreate_tables.assert_called_with(["tables"], ["drop"], athena_mock.return_value)
+        recreate_tables.assert_called_with(
+            ["tables"], ["drop"], athena_mock.return_value
+        )
         execute_glue.assert_called_with(
             "jobName",
             "12345",
@@ -583,8 +595,9 @@ class TestRetriever(unittest.TestCase):
             "streaming_main",
             "/import",
             "/export",
-            glue_mock.return_value
+            glue_mock.return_value,
         )
+
 
 if __name__ == "__main__":
     unittest.main()

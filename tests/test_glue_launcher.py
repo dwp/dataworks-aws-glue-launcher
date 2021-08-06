@@ -186,8 +186,9 @@ class TestRetriever(unittest.TestCase):
             expected == actual
         ), f"Expected does not equal actual. Expected '{expected}' but got '{actual}'"
 
+    @mock.patch("glue_launcher_lambda.glue_launcher.logger")
     @mock.patch("glue_launcher_lambda.glue_launcher.get_batch_client")
-    def test_batch_tasks_running(self, batch_client_mock):
+    def test_batch_tasks_running(self, batch_client_mock, logger):
 
         batch_client_mock.list_jobs.side_effect = [
             {"jobSummaryList": [1], "nextToken": "1400"},

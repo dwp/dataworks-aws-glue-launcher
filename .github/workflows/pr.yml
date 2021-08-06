@@ -3,6 +3,23 @@ name: PR Formatting and Testing
 on: pull_request
 
 jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v1
+
+      - name: Set up Python 3.8
+        uses: actions/setup-python@v1
+        with:
+          python-version: 3.8
+
+      - name: Install Tox
+        run: pip install tox
+
+      - name: unit-tests
+        run: make unittest
+
   format:
     runs-on: ubuntu-latest
     steps:
@@ -32,20 +49,3 @@ jobs:
           git checkout $GITHUB_HEAD_REF
           git commit -am "Fixup: Format Python code with Black"
           git push
-
-  test:
-    runs-on: ubuntu-latest
-    steps:
-      - name: Checkout
-        uses: actions/checkout@v1
-
-      - name: Set up Python 3.8
-        uses: actions/setup-python@v1
-        with:
-          python-version: 3.8
-
-      - name: Install Tox
-        run: pip install tox
-
-      - name: unit-tests
-        run: make unittest

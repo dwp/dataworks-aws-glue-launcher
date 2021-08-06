@@ -496,8 +496,6 @@ class TestRetriever(unittest.TestCase):
         running_batch_tasks,
     ):
 
-        batch_mock.return_value = MagicMock()
-
         parameters_mock.return_value = args
         dumped_event.return_value = "{}"
         job_details_validator.return_value = {
@@ -511,8 +509,8 @@ class TestRetriever(unittest.TestCase):
         event = {"event": "details"}
 
         calls = [
-            call("testqueue", batch_mock.return_value),
-            call("queuetest", batch_mock.return_value),
+            call("testqueue", batch_mock),
+            call("queuetest", batch_mock),
         ]
 
         with pytest.raises(SystemExit) as pytest_wrapped_e:

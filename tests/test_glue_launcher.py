@@ -33,9 +33,17 @@ args = argparse.Namespace()
 args.log_level = "INFO"
 args.application = "glue_launcher"
 args.environment = "development"
-args.job_queue_dependencies = "testqueue, queuetest"
+args.job_queue_dependencies = ["testqueue", "queuetest"]
 
 # Fetch table values
+args.etl_glue_job_name = "jobName"
+args.manifest_comparison_margin_of_error_minutes = "2"
+args.manifest_comparison_snapshot_type = "incremental"
+args.manifest_comparison_import_type = "streaming_main"
+args.manifest_s3_input_location_import = "/import"
+args.manifest_s3_input_location_export = "/export"
+args.manifest_comparison_cut_off_date_start = "1983-11-15T09:09:55.000"
+args.manifest_comparison_cut_off_date_end = "2099-11-15T09:09:55.000"
 args.manifest_missing_imports_table_name = "missing_imports"
 args.manifest_missing_exports_table_name = "missing_exports"
 args.manifest_counts_parquet_table_name = "counts"
@@ -178,8 +186,9 @@ class TestRetriever(unittest.TestCase):
             expected == actual
         ), f"Expected does not equal actual. Expected '{expected}' but got '{actual}'"
 
+    @mock.patch("glue_launcher_lambda.glue_launcher.logger")
     @mock.patch("glue_launcher_lambda.glue_launcher.get_batch_client")
-    def test_batch_tasks_running(self, batch_client_mock):
+    def test_batch_tasks_running(self, batch_client_mock, logger):
 
         batch_client_mock.list_jobs.side_effect = [
             {"jobSummaryList": [1], "nextToken": "1400"},
@@ -466,6 +475,128 @@ class TestRetriever(unittest.TestCase):
         assert (
             expected == actual
         ), f"Expected '{expected}' does not match actual '{actual}'"
+
+    @mock.patch("glue_launcher_lambda.glue_launcher.check_running_batch_tasks")
+    @mock.patch("glue_launcher_lambda.glue_launcher.get_batch_client")
+    @mock.patch("glue_launcher_lambda.glue_launcher.get_and_validate_job_details")
+    @mock.patch("glue_launcher_lambda.glue_launcher.get_escaped_json_string")
+    @mock.patch("glue_launcher_lambda.glue_launcher.logger")
+    @mock.patch("glue_launcher_lambda.glue_launcher.setup_logging")
+    @mock.patch("glue_launcher_lambda.glue_launcher.get_parameters")
+    def test_handler_flow_jobs_in_queue(
+        self,
+        parameters_mock,
+        setup_logging,
+        logger,
+        dumped_event,
+        job_details_validator,
+        batch_mock,
+        running_batch_tasks,
+    ):
+
+        batch_mock.return_value = MagicMock()
+
+        parameters_mock.return_value = args
+        dumped_event.return_value = "{}"
+        job_details_validator.return_value = {
+            "jobName": "job",
+            "status": "SUCCEEDED",
+            "jobQueue": "testqueue",
+        }
+
+        running_batch_tasks.side_effect = [1, 3]
+
+        event = {"event": "details"}
+
+        calls = [
+            call("testqueue", batch_mock.return_value),
+            call("queuetest", batch_mock.return_value),
+        ]
+
+        with pytest.raises(SystemExit) as pytest_wrapped_e:
+            glue_launcher.handler(event, None)
+
+        assert pytest_wrapped_e.type == SystemExit
+        assert pytest_wrapped_e.value.code == 0
+        running_batch_tasks.assert_has_calls(calls)
+
+    @mock.patch("glue_launcher_lambda.glue_launcher.generate_ms_epoch_from_timestamp")
+    @mock.patch("glue_launcher_lambda.glue_launcher.execute_manifest_glue_job")
+    @mock.patch("glue_launcher_lambda.glue_launcher.recreate_sql_tables")
+    @mock.patch("glue_launcher_lambda.glue_launcher.fetch_table_drop_sql_file")
+    @mock.patch("glue_launcher_lambda.glue_launcher.fetch_table_creation_sql_files")
+    @mock.patch("glue_launcher_lambda.glue_launcher.check_running_batch_tasks")
+    @mock.patch("glue_launcher_lambda.glue_launcher.get_glue_client")
+    @mock.patch("glue_launcher_lambda.glue_launcher.get_athena_client")
+    @mock.patch("glue_launcher_lambda.glue_launcher.get_batch_client")
+    @mock.patch("glue_launcher_lambda.glue_launcher.get_and_validate_job_details")
+    @mock.patch("glue_launcher_lambda.glue_launcher.get_escaped_json_string")
+    @mock.patch("glue_launcher_lambda.glue_launcher.logger")
+    @mock.patch("glue_launcher_lambda.glue_launcher.setup_logging")
+    @mock.patch("glue_launcher_lambda.glue_launcher.get_parameters")
+    def test_handler_flow_no_jobs_in_queue(
+        self,
+        parameters_mock,
+        setup_logging,
+        logger,
+        dumped_event,
+        job_details_validator,
+        batch_client_mock,
+        athena_mock,
+        glue_mock,
+        running_batch_tasks,
+        fetch_sql,
+        drop_sql,
+        recreate_tables,
+        execute_glue,
+        epoch_mock,
+    ):
+
+        batch_client_mock.return_value = MagicMock()
+        athena_mock.return_value = MagicMock()
+        glue_mock.return_value = MagicMock()
+
+        parameters_mock.return_value = args
+        dumped_event.return_value = "{}"
+        job_details_validator.return_value = {
+            "jobName": "job",
+            "status": "SUCCEEDED",
+            "jobQueue": "testqueue",
+        }
+
+        running_batch_tasks.side_effect = [0, 0]
+
+        event = {"event": "details"}
+
+        check_batch_calls = [
+            call("testqueue", batch_client_mock.return_value),
+            call("queuetest", batch_client_mock.return_value),
+        ]
+
+        fetch_sql.return_value = ["tables"]
+        drop_sql.return_value = ["drop"]
+        epoch_mock.side_effect = ["12345", "23456"]
+
+        glue_launcher.handler(event, None)
+
+        running_batch_tasks.assert_has_calls(check_batch_calls)
+
+        fetch_sql.assert_called_with("sql", parameters_mock.return_value)
+        drop_sql.assert_called_with("sql", parameters_mock.return_value)
+        recreate_tables.assert_called_with(
+            ["tables"], ["drop"], athena_mock.return_value
+        )
+        execute_glue.assert_called_with(
+            "jobName",
+            "12345",
+            "23456",
+            "2",
+            "incremental",
+            "streaming_main",
+            "/import",
+            "/export",
+            glue_mock.return_value,
+        )
 
 
 if __name__ == "__main__":

@@ -309,13 +309,22 @@ def check_running_batch_tasks(job_queue, batch_client):
             jobQueue=job_queue,
             jobStatus=status,
         )
+
         operational_tasks += len(response["jobSummaryList"])
+        logger.info(
+            f'Listing running jobs, "job_queue": {job_queue}, "status_check": {status}, "operational_tasks": {operational_tasks}'
+        )
+
         next_token = response.get("nextToken", None)
         while next_token is not None:
             response = batch_client.list_jobs(
                 jobQueue=job_queue, jobStatus=status, nextToken=next_token
             )
             operational_tasks += len(response["jobSummaryList"])
+            logger.info(
+                f'Listing running jobs of tokenised page, "job_queue": {job_queue}, "status_check": {status}, "operational_tasks": {operational_tasks}'
+            )
+
             next_token = response.get("nextToken", None)
 
     return operational_tasks
@@ -538,6 +547,8 @@ def handler(event, context):
 
     operational_tasks = 0
     for dependency in args.job_queue_dependencies:
+        logger.info(f"Checking running tasks for '{dependency}'")
+
         queue_tasks = check_running_batch_tasks(dependency, batch_client)
         operational_tasks += queue_tasks
 

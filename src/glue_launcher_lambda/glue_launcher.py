@@ -538,6 +538,8 @@ def handler(event, context):
 
     operational_tasks = 0
     for dependency in args.job_queue_dependencies:
+        logger.info(f"Checking running tasks for '{dependency}'")
+
         queue_tasks = check_running_batch_tasks(dependency, batch_client)
         operational_tasks += queue_tasks
 

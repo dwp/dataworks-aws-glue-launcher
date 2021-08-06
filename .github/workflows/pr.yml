@@ -3,7 +3,7 @@ name: PR Formatting and Testing
 on: pull_request
 
 jobs:
-  test:
+  test-then-format:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout
@@ -19,17 +19,6 @@ jobs:
 
       - name: unit-tests
         run: make unittest
-
-  format:
-    runs-on: ubuntu-latest
-    steps:
-      - name: Checkout
-        uses: actions/checkout@v1
-
-      - name: Set up Python 3.8
-        uses: actions/setup-python@v1
-        with:
-          python-version: 3.8
 
       - name: Install Black
         run: pip install black

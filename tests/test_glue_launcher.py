@@ -456,7 +456,7 @@ class TestRetriever(unittest.TestCase):
             "2021-07-27T05:38:54.000000", "%Y-%m-%dT%H:%M:%S.%f"
         )
 
-        expected = 1627364334000
+        expected = 1627364454000
         actual = glue_launcher.generate_ms_epoch_from_timestamp(datetime_obj, 2)
         assert (
             expected == actual

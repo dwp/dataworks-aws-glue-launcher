@@ -579,7 +579,10 @@ def handler(event, context):
         args.etl_glue_job_name,
         generate_ms_epoch_from_timestamp(args.manifest_comparison_cut_off_date_start),
         generate_ms_epoch_from_timestamp(args.manifest_comparison_cut_off_date_end),
-        args.manifest_comparison_margin_of_error_minutes,
+        generate_ms_epoch_from_timestamp(
+            args.manifest_comparison_cut_off_date_end,
+            int(args.manifest_comparison_margin_of_error_minutes),
+        ),
         args.manifest_comparison_snapshot_type,
         args.manifest_comparison_import_type,
         args.manifest_s3_input_location_import,

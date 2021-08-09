@@ -338,7 +338,7 @@ class TestRetriever(unittest.TestCase):
             ETL_GLUE_JOB_NAME,
             MANIFEST_COMPARISON_CUT_OFF_DATE_START,
             MANIFEST_COMPARISON_CUT_OFF_DATE_END,
-            margin_of_error="2",
+            MANIFEST_COMPARISON_CUT_OFF_DATE_END,
             snapshot_type="full",
             import_type="historic",
             import_prefix="/import_prefix/",
@@ -351,7 +351,7 @@ class TestRetriever(unittest.TestCase):
             Arguments={
                 "--cut_off_time_start": MANIFEST_COMPARISON_CUT_OFF_DATE_START,
                 "--cut_off_time_end": MANIFEST_COMPARISON_CUT_OFF_DATE_END,
-                "--margin_of_error": "2",
+                "--margin_of_error": MANIFEST_COMPARISON_CUT_OFF_DATE_END,
                 "--import_type": "historic",
                 "--snapshot_type": "full",
                 "--import_prefix": "/import_prefix",
@@ -447,6 +447,17 @@ class TestRetriever(unittest.TestCase):
 
         expected = 1627364334000
         actual = glue_launcher.generate_ms_epoch_from_timestamp(datetime_obj)
+        assert (
+            expected == actual
+        ), f"Expected '{expected}' does not match actual '{actual}'"
+
+    def test_generate_ms_epoch_with_zero_minutes(self):
+        datetime_obj = datetime.strptime(
+            "2021-07-27T05:38:54.000000", "%Y-%m-%dT%H:%M:%S.%f"
+        )
+
+        expected = 1627364334000
+        actual = glue_launcher.generate_ms_epoch_from_timestamp(datetime_obj, 2)
         assert (
             expected == actual
         ), f"Expected '{expected}' does not match actual '{actual}'"
@@ -583,11 +594,20 @@ class TestRetriever(unittest.TestCase):
 
         fetch_sql.return_value = ["tables"]
         drop_sql.return_value = ["drop"]
-        epoch_mock.side_effect = ["12345", "23456"]
+
+        epoch_mock_calls = [
+            call(args.manifest_comparison_cut_off_date_start),
+            call(args.manifest_comparison_cut_off_date_end),
+            call(args.manifest_comparison_cut_off_date_end, 2),
+        ]
+        epoch_mock.side_effect = ["12345", "23456", "23458"]
 
         glue_launcher.handler(event, None)
 
         running_batch_tasks.assert_has_calls(check_batch_calls)
+        assert running_batch_tasks.call_count == len(check_batch_calls)
+        epoch_mock.assert_has_calls(epoch_mock_calls)
+        assert epoch_mock.call_count == len(epoch_mock_calls)
 
         fetch_sql.assert_called_with("sql", parameters_mock.return_value)
         drop_sql.assert_called_with("sql", parameters_mock.return_value)
@@ -598,7 +618,7 @@ class TestRetriever(unittest.TestCase):
             "jobName",
             "12345",
             "23456",
-            "2",
+            "23458",
             "incremental",
             "streaming_main",
             "/import",

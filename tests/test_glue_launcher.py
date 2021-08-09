@@ -197,6 +197,7 @@ class TestRetriever(unittest.TestCase):
             {"jobSummaryList": [1, 2], "nextToken": "1500"},
             {"jobSummaryList": [2]},
             {"jobSummaryList": [1]},
+            {"jobSummaryList": [1]},
         ]
 
         response = glue_launcher.check_running_batch_tasks(
@@ -206,6 +207,7 @@ class TestRetriever(unittest.TestCase):
         status_calls = [
             call(jobQueue="job_queue", jobStatus="SUBMITTED"),
             call(jobQueue="job_queue", jobStatus="PENDING"),
+            call(jobQueue="job_queue", jobStatus="RUNNING"),
             call(jobQueue="job_queue", jobStatus="PENDING", nextToken="1400"),
             call(jobQueue="job_queue", jobStatus="RUNNABLE"),
             call(jobQueue="job_queue", jobStatus="RUNNABLE", nextToken="1500"),

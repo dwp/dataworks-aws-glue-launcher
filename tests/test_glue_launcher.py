@@ -217,7 +217,9 @@ class TestRetriever(unittest.TestCase):
 
         expected_call_count = 8
 
-        assert response == expected_call_count, f"Response is not equal to {expected_call_count}"
+        assert (
+            response == expected_call_count
+        ), f"Response is not equal to {expected_call_count}"
 
     @mock.patch("glue_launcher_lambda.glue_launcher.execute_athena_query")
     @mock.patch("glue_launcher_lambda.glue_launcher.logger")

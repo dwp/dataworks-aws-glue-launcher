@@ -18,18 +18,14 @@ PENDING_JOB_STATUS = "PENDING"
 RUNNABLE_JOB_STATUS = "RUNNABLE"
 STARTING_JOB_STATUS = "STARTING"
 SUCCEEDED_JOB_STATUS = "SUCCEEDED"
+RUNNING_JOB_STATUS = "RUNNING"
 
 OPERATIONAL_JOB_STATUSES = [
     SUBMITTED_JOB_STATUS,
     PENDING_JOB_STATUS,
     RUNNABLE_JOB_STATUS,
     STARTING_JOB_STATUS,
-]
-IGNORED_JOB_STATUSES = [
-    SUBMITTED_JOB_STATUS,
-    PENDING_JOB_STATUS,
-    RUNNABLE_JOB_STATUS,
-    STARTING_JOB_STATUS,
+    RUNNING_JOB_STATUS,
 ]
 FINISHED_JOB_STATUSES = [SUCCEEDED_JOB_STATUS, FAILED_JOB_STATUS]
 
@@ -319,7 +315,7 @@ def check_running_batch_tasks(job_queue, batch_client):
 
         operational_tasks += len(response["jobSummaryList"])
         logger.info(
-            f'Listing running jobs, "job_queue": {job_queue}, "status_check": {status}, "operational_tasks": {operational_tasks}'
+            f'Listing running jobs, "job_queue": "{job_queue}", "status_check": "{status}", "operational_tasks": "{operational_tasks}'
         )
 
         next_token = response.get("nextToken", None)
@@ -329,7 +325,7 @@ def check_running_batch_tasks(job_queue, batch_client):
             )
             operational_tasks += len(response["jobSummaryList"])
             logger.info(
-                f'Listing running jobs of tokenised page, "job_queue": {job_queue}, "status_check": {status}, "operational_tasks": {operational_tasks}'
+                f'Listing running jobs of tokenised page, "job_queue": "{job_queue}", "status_check": "{status}", "operational_tasks": "{operational_tasks}'
             )
 
             next_token = response.get("nextToken", None)

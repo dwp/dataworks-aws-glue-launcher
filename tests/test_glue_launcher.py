@@ -495,6 +495,7 @@ class TestRetriever(unittest.TestCase):
             expected == actual
         ), f"Expected '{expected}' does not match actual '{actual}'"
 
+    @mock.patch("glue_launcher_lambda.glue_launcher.execute_manifest_glue_job")
     @mock.patch("glue_launcher_lambda.glue_launcher.check_running_batch_tasks")
     @mock.patch("glue_launcher_lambda.glue_launcher.get_batch_client")
     @mock.patch("glue_launcher_lambda.glue_launcher.get_and_validate_job_details")
@@ -511,6 +512,7 @@ class TestRetriever(unittest.TestCase):
         job_details_validator,
         batch_mock,
         running_batch_tasks,
+        execute_glue,
     ):
 
         batch_mock.return_value = MagicMock()
@@ -538,6 +540,55 @@ class TestRetriever(unittest.TestCase):
         assert pytest_wrapped_e.type == SystemExit
         assert pytest_wrapped_e.value.code == 0
         running_batch_tasks.assert_has_calls(calls)
+        execute_glue.assert_not_called()
+
+    @mock.patch("glue_launcher_lambda.glue_launcher.execute_manifest_glue_job")
+    @mock.patch("glue_launcher_lambda.glue_launcher.check_running_batch_tasks")
+    @mock.patch("glue_launcher_lambda.glue_launcher.get_batch_client")
+    @mock.patch("glue_launcher_lambda.glue_launcher.get_and_validate_job_details")
+    @mock.patch("glue_launcher_lambda.glue_launcher.get_escaped_json_string")
+    @mock.patch("glue_launcher_lambda.glue_launcher.logger")
+    @mock.patch("glue_launcher_lambda.glue_launcher.setup_logging")
+    @mock.patch("glue_launcher_lambda.glue_launcher.get_parameters")
+    def test_handler_flow_jobs_in_queue_and_ignore_as_false(
+        self,
+        parameters_mock,
+        setup_logging,
+        logger,
+        dumped_event,
+        job_details_validator,
+        batch_mock,
+        running_batch_tasks,
+        execute_glue,
+    ):
+
+        batch_mock.return_value = MagicMock()
+
+        parameters_mock.return_value = args
+        dumped_event.return_value = "{}"
+        job_details_validator.return_value = {
+            "jobName": "job",
+            "status": "SUCCEEDED",
+            "jobQueue": "testqueue",
+            "ignoreBatchChecks": "false",
+        }
+
+        running_batch_tasks.side_effect = [1, 3]
+
+        event = {"event": "details"}
+
+        calls = [
+            call("testqueue", batch_mock.return_value),
+            call("queuetest", batch_mock.return_value),
+        ]
+
+        with pytest.raises(SystemExit) as pytest_wrapped_e:
+            glue_launcher.handler(event, None)
+
+        assert pytest_wrapped_e.type == SystemExit
+        assert pytest_wrapped_e.value.code == 0
+        running_batch_tasks.assert_has_calls(calls)
+        execute_glue.assert_not_called()
 
     @mock.patch("glue_launcher_lambda.glue_launcher.generate_ms_epoch_from_timestamp")
     @mock.patch("glue_launcher_lambda.glue_launcher.execute_manifest_glue_job")
@@ -606,6 +657,86 @@ class TestRetriever(unittest.TestCase):
 
         running_batch_tasks.assert_has_calls(check_batch_calls)
         assert running_batch_tasks.call_count == len(check_batch_calls)
+        epoch_mock.assert_has_calls(epoch_mock_calls)
+        assert epoch_mock.call_count == len(epoch_mock_calls)
+
+        fetch_sql.assert_called_with("sql", parameters_mock.return_value)
+        drop_sql.assert_called_with("sql", parameters_mock.return_value)
+        recreate_tables.assert_called_with(
+            ["tables"], ["drop"], athena_mock.return_value
+        )
+        execute_glue.assert_called_with(
+            "jobName",
+            "12345",
+            "23456",
+            "23458",
+            "incremental",
+            "streaming_main",
+            "/import",
+            "/export",
+            glue_mock.return_value,
+        )
+
+    @mock.patch("glue_launcher_lambda.glue_launcher.generate_ms_epoch_from_timestamp")
+    @mock.patch("glue_launcher_lambda.glue_launcher.execute_manifest_glue_job")
+    @mock.patch("glue_launcher_lambda.glue_launcher.recreate_sql_tables")
+    @mock.patch("glue_launcher_lambda.glue_launcher.fetch_table_drop_sql_file")
+    @mock.patch("glue_launcher_lambda.glue_launcher.fetch_table_creation_sql_files")
+    @mock.patch("glue_launcher_lambda.glue_launcher.check_running_batch_tasks")
+    @mock.patch("glue_launcher_lambda.glue_launcher.get_glue_client")
+    @mock.patch("glue_launcher_lambda.glue_launcher.get_athena_client")
+    @mock.patch("glue_launcher_lambda.glue_launcher.get_batch_client")
+    @mock.patch("glue_launcher_lambda.glue_launcher.get_and_validate_job_details")
+    @mock.patch("glue_launcher_lambda.glue_launcher.get_escaped_json_string")
+    @mock.patch("glue_launcher_lambda.glue_launcher.logger")
+    @mock.patch("glue_launcher_lambda.glue_launcher.setup_logging")
+    @mock.patch("glue_launcher_lambda.glue_launcher.get_parameters")
+    def test_handler_with_batch_override(
+        self,
+        parameters_mock,
+        setup_logging,
+        logger,
+        dumped_event,
+        job_details_validator,
+        batch_client_mock,
+        athena_mock,
+        glue_mock,
+        running_batch_tasks,
+        fetch_sql,
+        drop_sql,
+        recreate_tables,
+        execute_glue,
+        epoch_mock,
+    ):
+
+        athena_mock.return_value = MagicMock()
+        glue_mock.return_value = MagicMock()
+
+        parameters_mock.return_value = args
+        dumped_event.return_value = "{}"
+        job_details_validator.return_value = {
+            "jobName": "job",
+            "status": "SUCCEEDED",
+            "jobQueue": "testqueue",
+            "ignoreBatchChecks": "true",
+        }
+
+        event = {"event": "details"}
+
+        fetch_sql.return_value = ["tables"]
+        drop_sql.return_value = ["drop"]
+
+        epoch_mock_calls = [
+            call(args.manifest_comparison_cut_off_date_start),
+            call(args.manifest_comparison_cut_off_date_end),
+            call(args.manifest_comparison_cut_off_date_end, 2),
+        ]
+        epoch_mock.side_effect = ["12345", "23456", "23458"]
+
+        glue_launcher.handler(event, None)
+
+        running_batch_tasks.assert_not_called()
+
         epoch_mock.assert_has_calls(epoch_mock_calls)
         assert epoch_mock.call_count == len(epoch_mock_calls)
 

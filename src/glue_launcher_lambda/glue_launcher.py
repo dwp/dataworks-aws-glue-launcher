@@ -539,7 +539,10 @@ def handler(event, context):
     job_status = detail_dict[JOB_STATUS_KEY]
     job_queue = detail_dict[JOB_QUEUE_KEY]
 
-    override_batch_checks = BATCH_CHECKS_OVERRIDE_KEY in detail_dict and detail_dict[BATCH_CHECKS_OVERRIDE_KEY] == "true"
+    override_batch_checks = (
+        BATCH_CHECKS_OVERRIDE_KEY in detail_dict
+        and detail_dict[BATCH_CHECKS_OVERRIDE_KEY] == "true"
+    )
 
     if job_status not in FINISHED_JOB_STATUSES:
         logger.info(

@@ -41,3 +41,7 @@ Then the lambda will start the AWS Glue job with its required parameters.
 |MANIFEST_S3_INPUT_PARQUET_LOCATION_COUNTS | Full S3 URI to counts output location |
 |MANIFEST_S3_INPUT_PARQUET_LOCATION_MISMATCHED_TIMESTAMPS | Full S3 URI to mismatched timestamps output location |
 |MANIFEST_S3_OUTPUT_LOCATION | Output location on S3 for Athena query outputs |
+
+# Batch checks override
+
+If you want to override the batch checks (i.e. for recovery CI pipelines), then when invoking the lambda you can pass in `ignoreBatchChecks` in the `details` dict with a value of `true`.

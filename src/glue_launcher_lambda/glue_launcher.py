@@ -20,6 +20,8 @@ STARTING_JOB_STATUS = "STARTING"
 SUCCEEDED_JOB_STATUS = "SUCCEEDED"
 RUNNING_JOB_STATUS = "RUNNING"
 
+BATCH_CHECKS_OVERRIDE_KEY = "ignoreBatchChecks"
+
 OPERATIONAL_JOB_STATUSES = [
     SUBMITTED_JOB_STATUS,
     PENDING_JOB_STATUS,
@@ -537,6 +539,8 @@ def handler(event, context):
     job_status = detail_dict[JOB_STATUS_KEY]
     job_queue = detail_dict[JOB_QUEUE_KEY]
 
+    override_batch_checks = BATCH_CHECKS_OVERRIDE_KEY in detail_dict and detail_dict[BATCH_CHECKS_OVERRIDE_KEY] == "true"
+
     if job_status not in FINISHED_JOB_STATUSES:
         logger.info(
             f'Exiting normally as job status warrants no further action", '
@@ -546,25 +550,30 @@ def handler(event, context):
 
     logger.info(f"Job status is a finished job status '{job_status}'")
 
-    batch_client = get_batch_client()
-
-    operational_tasks = 0
-    for dependency in args.job_queue_dependencies:
-        logger.info(f"Checking running tasks for '{dependency}'")
-
-        queue_tasks = check_running_batch_tasks(dependency, batch_client)
-        operational_tasks += queue_tasks
-
-    if operational_tasks > 0:
+    if override_batch_checks:
         logger.info(
-            f'Exiting as job queues are still busy, no further action", '
-            + f'"job_name": "{job_name}", "job_queue": "{job_queue}", "job_status": "{job_status}'
+            f"Overriding batch checks as 'override_batch_checks' is set to '{override_batch_checks}'"
         )
-        sys.exit(0)
+    else:
+        batch_client = get_batch_client()
 
-    logger.info(
-        f"Operational tasks is '{operational_tasks}', continuing to create Athena tables"
-    )
+        operational_tasks = 0
+        for dependency in args.job_queue_dependencies:
+            logger.info(f"Checking running tasks for '{dependency}'")
+
+            queue_tasks = check_running_batch_tasks(dependency, batch_client)
+            operational_tasks += queue_tasks
+
+        if operational_tasks > 0:
+            logger.info(
+                f'Exiting as job queues are still busy, no further action", '
+                + f'"job_name": "{job_name}", "job_queue": "{job_queue}", "job_status": "{job_status}'
+            )
+            sys.exit(0)
+
+        logger.info(
+            f"Operational tasks is '{operational_tasks}', continuing to create Athena tables"
+        )
 
     tables = fetch_table_creation_sql_files(SQL_LOCATION, args)
 

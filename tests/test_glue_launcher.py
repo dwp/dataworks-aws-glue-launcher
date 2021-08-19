@@ -65,11 +65,11 @@ class TestRetriever(unittest.TestCase):
     @mock.patch("glue_launcher_lambda.glue_launcher.get_parameters")
     @mock.patch("glue_launcher_lambda.glue_launcher.logger")
     def test_handler_ignores_jobs_with_ignored_status(
-            self,
-            mock_logger,
-            get_parameters_mock,
-            setup_logging_mock,
-            get_and_validate_job_details_mock,
+        self,
+        mock_logger,
+        get_parameters_mock,
+        setup_logging_mock,
+        get_and_validate_job_details_mock,
     ):
         get_parameters_mock.return_value = args
 
@@ -98,13 +98,13 @@ class TestRetriever(unittest.TestCase):
     @mock.patch("glue_launcher_lambda.glue_launcher.get_parameters")
     @mock.patch("glue_launcher_lambda.glue_launcher.logger")
     def test_batch_queue_jobs_present_no_further_action(
-            self,
-            mock_logger,
-            get_parameters_mock,
-            setup_logging_mock,
-            get_batch_client_mock,
-            get_and_validate_job_details_mock,
-            running_batch_tasks_mock,
+        self,
+        mock_logger,
+        get_parameters_mock,
+        setup_logging_mock,
+        get_batch_client_mock,
+        get_and_validate_job_details_mock,
+        running_batch_tasks_mock,
     ):
         get_parameters_mock.return_value = args
         running_batch_tasks_mock.return_value = 2
@@ -129,19 +129,19 @@ class TestRetriever(unittest.TestCase):
 
     def test_batch_queue_jobs_empty_fetch_table_creation_sql(self):
         with open(
-                os.path.join(SQL_FILE_LOCATION, "create-parquet-table.sql"), "r"
+            os.path.join(SQL_FILE_LOCATION, "create-parquet-table.sql"), "r"
         ) as f:
             base_create_parquet_query = f.read()
 
         with open(
-                os.path.join(SQL_FILE_LOCATION, "create-missing-import-table.sql"),
-                "r",
+            os.path.join(SQL_FILE_LOCATION, "create-missing-import-table.sql"),
+            "r",
         ) as f:
             base_create_missing_import_query = f.read()
 
         with open(
-                os.path.join(SQL_FILE_LOCATION, "create-missing-export-table.sql"),
-                "r",
+            os.path.join(SQL_FILE_LOCATION, "create-missing-export-table.sql"),
+            "r",
         ) as f:
             base_create_missing_export_query = f.read()
 
@@ -172,13 +172,13 @@ class TestRetriever(unittest.TestCase):
         ]
         actual = glue_launcher.fetch_table_creation_sql_files(SQL_FILE_LOCATION, args)
         assert (
-                expected == actual
+            expected == actual
         ), f"Expected does not equal actual. Expected '{expected}' but got '{actual}'"
 
     @mock.patch("glue_launcher_lambda.glue_launcher.get_and_validate_job_details")
     def test_batch_queue_jobs_empty_fetch_table_drop_sql(
-            self,
-            get_and_validate_job_details_mock,
+        self,
+        get_and_validate_job_details_mock,
     ):
         with open(os.path.join(SQL_FILE_LOCATION, "drop-table.sql"), "r") as f:
             base_drop_query = f.read()
@@ -187,7 +187,7 @@ class TestRetriever(unittest.TestCase):
         actual = glue_launcher.fetch_table_drop_sql_file(SQL_FILE_LOCATION, args)
 
         assert (
-                expected == actual
+            expected == actual
         ), f"Expected does not equal actual. Expected '{expected}' but got '{actual}'"
 
     @mock.patch("glue_launcher_lambda.glue_launcher.logger")
@@ -221,15 +221,15 @@ class TestRetriever(unittest.TestCase):
         expected_call_count = 8
 
         assert (
-                response == expected_call_count
+            response == expected_call_count
         ), f"Response is not equal to {expected_call_count}"
 
     @mock.patch("glue_launcher_lambda.glue_launcher.execute_athena_query")
     @mock.patch("glue_launcher_lambda.glue_launcher.logger")
     def test_recreate_single_table(
-            self,
-            mock_logger,
-            execute_athena_mock,
+        self,
+        mock_logger,
+        execute_athena_mock,
     ):
         athena_client_mock = mock
 
@@ -269,9 +269,9 @@ class TestRetriever(unittest.TestCase):
     @mock.patch("glue_launcher_lambda.glue_launcher.execute_athena_query")
     @mock.patch("glue_launcher_lambda.glue_launcher.logger")
     def test_recreate_multiple_tables(
-            self,
-            mock_logger,
-            execute_athena_mock,
+        self,
+        mock_logger,
+        execute_athena_mock,
     ):
         athena_client_mock = mock
 
@@ -366,12 +366,12 @@ class TestRetriever(unittest.TestCase):
     @mock.patch("glue_launcher_lambda.glue_launcher.setup_logging")
     @mock.patch("glue_launcher_lambda.glue_launcher.logger")
     def test_athena_executions(
-            self,
-            mock_logger,
-            mock_setup_logger,
-            get_params_mock,
-            athena_client_mock,
-            poll_athena_mock,
+        self,
+        mock_logger,
+        mock_setup_logger,
+        get_params_mock,
+        athena_client_mock,
+        poll_athena_mock,
     ):
         get_params_mock.return_value = args
         athena_client_mock.start_query_execution.return_value = {
@@ -422,7 +422,7 @@ class TestRetriever(unittest.TestCase):
         )
         actual = glue_launcher.get_previous_midnight()
         assert (
-                expected == actual
+            expected == actual
         ), f"Expected '{expected}' does not match actual '{actual}'"
 
     @mock.patch("glue_launcher_lambda.glue_launcher.get_current_date")
@@ -436,7 +436,7 @@ class TestRetriever(unittest.TestCase):
         )
         actual = glue_launcher.get_today_midnight()
         assert (
-                expected == actual
+            expected == actual
         ), f"Expected '{expected}' does not match actual '{actual}'"
 
     def test_generate_ms_epoch(self):
@@ -447,7 +447,7 @@ class TestRetriever(unittest.TestCase):
         expected = 1627364334000
         actual = glue_launcher.generate_ms_epoch_from_timestamp(datetime_obj)
         assert (
-                expected == actual
+            expected == actual
         ), f"Expected '{expected}' does not match actual '{actual}'"
 
     def test_generate_ms_epoch_with_zero_minutes(self):
@@ -458,7 +458,7 @@ class TestRetriever(unittest.TestCase):
         expected = 1627364454000
         actual = glue_launcher.generate_ms_epoch_from_timestamp(datetime_obj, 2)
         assert (
-                expected == actual
+            expected == actual
         ), f"Expected '{expected}' does not match actual '{actual}'"
 
     def test_generate_ms_epoch_additional_minutes(self):
@@ -469,7 +469,7 @@ class TestRetriever(unittest.TestCase):
         expected = 1627364454000
         actual = glue_launcher.generate_ms_epoch_from_timestamp(datetime_obj, 2)
         assert (
-                expected == actual
+            expected == actual
         ), f"Expected '{expected}' does not match actual '{actual}'"
 
     def test_generate_ms_epoch(self):
@@ -480,7 +480,7 @@ class TestRetriever(unittest.TestCase):
         expected = 1627364334000
         actual = glue_launcher.generate_ms_epoch_from_timestamp(datetime_obj)
         assert (
-                expected == actual
+            expected == actual
         ), f"Expected '{expected}' does not match actual '{actual}'"
 
     def test_generate_ms_epoch_additional_minutes(self):
@@ -491,7 +491,7 @@ class TestRetriever(unittest.TestCase):
         expected = 1627364454000
         actual = glue_launcher.generate_ms_epoch_from_timestamp(datetime_obj, 2)
         assert (
-                expected == actual
+            expected == actual
         ), f"Expected '{expected}' does not match actual '{actual}'"
 
     @mock.patch("glue_launcher_lambda.glue_launcher.execute_manifest_glue_job")
@@ -503,15 +503,15 @@ class TestRetriever(unittest.TestCase):
     @mock.patch("glue_launcher_lambda.glue_launcher.setup_logging")
     @mock.patch("glue_launcher_lambda.glue_launcher.get_parameters")
     def test_handler_flow_jobs_in_queue(
-            self,
-            parameters_mock,
-            setup_logging,
-            logger,
-            dumped_event,
-            job_details_validator,
-            batch_mock,
-            running_batch_tasks,
-            execute_glue,
+        self,
+        parameters_mock,
+        setup_logging,
+        logger,
+        dumped_event,
+        job_details_validator,
+        batch_mock,
+        running_batch_tasks,
+        execute_glue,
     ):
         batch_mock.return_value = MagicMock()
 
@@ -549,15 +549,15 @@ class TestRetriever(unittest.TestCase):
     @mock.patch("glue_launcher_lambda.glue_launcher.setup_logging")
     @mock.patch("glue_launcher_lambda.glue_launcher.get_parameters")
     def test_handler_flow_jobs_in_queue_and_ignore_as_false(
-            self,
-            parameters_mock,
-            setup_logging,
-            logger,
-            dumped_event,
-            job_details_validator,
-            batch_mock,
-            running_batch_tasks,
-            execute_glue,
+        self,
+        parameters_mock,
+        setup_logging,
+        logger,
+        dumped_event,
+        job_details_validator,
+        batch_mock,
+        running_batch_tasks,
+        execute_glue,
     ):
         batch_mock.return_value = MagicMock()
 
@@ -603,22 +603,22 @@ class TestRetriever(unittest.TestCase):
     @mock.patch("glue_launcher_lambda.glue_launcher.setup_logging")
     @mock.patch("glue_launcher_lambda.glue_launcher.get_parameters")
     def test_handler_flow_no_jobs_in_queue(
-            self,
-            parameters_mock,
-            setup_logging,
-            logger,
-            dumped_event,
-            job_details_validator,
-            batch_client_mock,
-            athena_mock,
-            glue_mock,
-            running_batch_tasks,
-            fetch_sql,
-            drop_sql,
-            recreate_tables,
-            execute_glue,
-            epoch_mock,
-            clear_output_mock
+        self,
+        parameters_mock,
+        setup_logging,
+        logger,
+        dumped_event,
+        job_details_validator,
+        batch_client_mock,
+        athena_mock,
+        glue_mock,
+        running_batch_tasks,
+        fetch_sql,
+        drop_sql,
+        recreate_tables,
+        execute_glue,
+        epoch_mock,
+        clear_output_mock,
     ):
         batch_client_mock.return_value = MagicMock()
         athena_mock.return_value = MagicMock()
@@ -653,7 +653,9 @@ class TestRetriever(unittest.TestCase):
 
         glue_launcher.handler(event, None)
 
-        clear_output_mock.assert_called_once_with(args.manifest_s3_bucket, args.manifest_s3_prefix)
+        clear_output_mock.assert_called_once_with(
+            args.manifest_s3_bucket, args.manifest_s3_prefix
+        )
 
         running_batch_tasks.assert_has_calls(check_batch_calls)
         assert running_batch_tasks.call_count == len(check_batch_calls)
@@ -693,22 +695,22 @@ class TestRetriever(unittest.TestCase):
     @mock.patch("glue_launcher_lambda.glue_launcher.setup_logging")
     @mock.patch("glue_launcher_lambda.glue_launcher.get_parameters")
     def test_handler_with_batch_override(
-            self,
-            parameters_mock,
-            setup_logging,
-            logger,
-            dumped_event,
-            job_details_validator,
-            batch_client_mock,
-            athena_mock,
-            glue_mock,
-            running_batch_tasks,
-            fetch_sql,
-            drop_sql,
-            recreate_tables,
-            execute_glue,
-            epoch_mock,
-            clear_output_mock
+        self,
+        parameters_mock,
+        setup_logging,
+        logger,
+        dumped_event,
+        job_details_validator,
+        batch_client_mock,
+        athena_mock,
+        glue_mock,
+        running_batch_tasks,
+        fetch_sql,
+        drop_sql,
+        recreate_tables,
+        execute_glue,
+        epoch_mock,
+        clear_output_mock,
     ):
         athena_mock.return_value = MagicMock()
         glue_mock.return_value = MagicMock()
@@ -736,7 +738,9 @@ class TestRetriever(unittest.TestCase):
 
         glue_launcher.handler(event, None)
 
-        clear_output_mock.assert_called_once_with(args.manifest_s3_bucket, args.manifest_s3_prefix)
+        clear_output_mock.assert_called_once_with(
+            args.manifest_s3_bucket, args.manifest_s3_prefix
+        )
 
         running_batch_tasks.assert_not_called()
 
@@ -764,28 +768,21 @@ class TestRetriever(unittest.TestCase):
     @mock.patch("glue_launcher_lambda.glue_launcher.get_s3_client")
     def test_clear_manifest_output(self, mock_get_s3):
         bucket = "manifest_bucket"
-        prefix = "/business-data/manifest/query-output_streaming_main_incremental/templates"
-        s3_client = boto3.client(service_name='s3', region_name="eu-west-2")
+        prefix = (
+            "/business-data/manifest/query-output_streaming_main_incremental/templates"
+        )
+        s3_client = boto3.client(service_name="s3", region_name="eu-west-2")
         s3_client.create_bucket(
-            Bucket=bucket,
-            CreateBucketConfiguration={
-                'LocationConstraint': 'eu-west-2'
-
-            }
+            Bucket=bucket, CreateBucketConfiguration={"LocationConstraint": "eu-west-2"}
         )
 
         for n in range(5):
             s3_client.put_object(
-                Body=f"File number {n}",
-                Bucket=bucket,
-                Key=f"{prefix}/{n}"
+                Body=f"File number {n}", Bucket=bucket, Key=f"{prefix}/{n}"
             )
 
-        bucket_contents = s3_client.list_objects_v2(
-            Bucket=bucket,
-            Prefix=prefix
-        )
-        num_files = bucket_contents['KeyCount']
+        bucket_contents = s3_client.list_objects_v2(Bucket=bucket, Prefix=prefix)
+        num_files = bucket_contents["KeyCount"]
 
         self.assertEqual(num_files, 5)
 
@@ -794,10 +791,9 @@ class TestRetriever(unittest.TestCase):
         glue_launcher.clear_manifest_output(bucket, prefix)
 
         cleared_bucket_contents = s3_client.list_objects_v2(
-            Bucket=bucket,
-            Prefix=prefix
+            Bucket=bucket, Prefix=prefix
         )
-        num_cleared_files = cleared_bucket_contents['KeyCount']
+        num_cleared_files = cleared_bucket_contents["KeyCount"]
 
         self.assertEqual(num_cleared_files, 0)
 

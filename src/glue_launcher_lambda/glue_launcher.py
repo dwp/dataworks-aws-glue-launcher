@@ -171,8 +171,8 @@ def get_parameters():
 
     if "MANIFEST_COMPARISON_CUT_OFF_DATE_START" in os.environ:
         if (
-                os.environ["MANIFEST_COMPARISON_CUT_OFF_DATE_START"].upper()
-                == "PREVIOUS_DAY_MIDNIGHT"
+            os.environ["MANIFEST_COMPARISON_CUT_OFF_DATE_START"].upper()
+            == "PREVIOUS_DAY_MIDNIGHT"
         ):
             _args.manifest_comparison_cut_off_date_start = get_previous_midnight()
         else:
@@ -186,8 +186,8 @@ def get_parameters():
 
     if "MANIFEST_COMPARISON_CUT_OFF_DATE_END" in os.environ:
         if (
-                os.environ["MANIFEST_COMPARISON_CUT_OFF_DATE_END"].upper()
-                == "TODAY_MIDNIGHT"
+            os.environ["MANIFEST_COMPARISON_CUT_OFF_DATE_END"].upper()
+            == "TODAY_MIDNIGHT"
         ):
             _args.manifest_comparison_cut_off_date_end = get_today_midnight()
         else:
@@ -236,9 +236,9 @@ def get_parameters():
             "MANIFEST_S3_INPUT_PARQUET_LOCATION_MISMATCHED_TIMESTAMPS"
         ]
 
-    if {'MANIFEST_S3_BUCKET', 'MANIFEST_S3_PREFIX'}.issubset(os.environ):
-        s3_bucket = os.environ['MANIFEST_S3_BUCKET']
-        s3_prefix = os.environ['MANIFEST_S3_PREFIX']
+    if {"MANIFEST_S3_BUCKET", "MANIFEST_S3_PREFIX"}.issubset(os.environ):
+        s3_bucket = os.environ["MANIFEST_S3_BUCKET"]
+        s3_prefix = os.environ["MANIFEST_S3_PREFIX"]
         _args.manifest_s3_output_location = f"s3://{s3_bucket}/{s3_prefix}"
         _args.manifest_s3_bucket = s3_bucket
         _args.manifest_s3_prefix = s3_prefix
@@ -346,20 +346,20 @@ def check_running_batch_tasks(job_queue, batch_client):
 
 def clear_manifest_output(bucket, prefix):
     s3_client = get_s3_client()
-    paginator = s3_client.get_paginator('list_objects_v2')
+    paginator = s3_client.get_paginator("list_objects_v2")
     pages = paginator.paginate(Bucket=bucket, Prefix=prefix)
 
     key_to_delete = dict(Objects=[])
-    for item in pages.search('Contents'):
-        key_to_delete['Objects'].append(dict(Key=item['Key']))
+    for item in pages.search("Contents"):
+        key_to_delete["Objects"].append(dict(Key=item["Key"]))
 
         # flush once aws limit reached
-        if len(key_to_delete['Objects']) >= 1000:
+        if len(key_to_delete["Objects"]) >= 1000:
             s3_client.delete_objects(Bucket=bucket, Delete=key_to_delete)
             key_to_delete = dict(Objects=[])
 
     # flush rest
-    if len(key_to_delete['Objects']):
+    if len(key_to_delete["Objects"]):
         s3_client.delete_objects(Bucket=bucket, Delete=key_to_delete)
 
 
@@ -368,14 +368,14 @@ def fetch_table_creation_sql_files(file_path, args):
         base_create_parquet_query = f.read()
 
     with open(
-            os.path.join(file_path, "create-missing-import-table.sql"),
-            "r",
+        os.path.join(file_path, "create-missing-import-table.sql"),
+        "r",
     ) as f:
         base_create_missing_import_query = f.read()
 
     with open(
-            os.path.join(file_path, "create-missing-export-table.sql"),
-            "r",
+        os.path.join(file_path, "create-missing-export-table.sql"),
+        "r",
     ) as f:
         base_create_missing_export_query = f.read()
 
@@ -490,15 +490,15 @@ def recreate_sql_tables(tables, drop_query, athena_client):
 
 
 def execute_manifest_glue_job(
-        job_name,
-        cut_off_time_start,
-        cut_off_time_end,
-        margin_of_error,
-        snapshot_type,
-        import_type,
-        import_prefix,
-        export_prefix,
-        glue_client,
+    job_name,
+    cut_off_time_start,
+    cut_off_time_end,
+    margin_of_error,
+    snapshot_type,
+    import_type,
+    import_prefix,
+    export_prefix,
+    glue_client,
 ):
     """Executes the given job in aws glue.
     Keyword arguments:
@@ -568,8 +568,8 @@ def handler(event, context):
     job_queue = detail_dict[JOB_QUEUE_KEY]
 
     override_batch_checks = (
-            BATCH_CHECKS_OVERRIDE_KEY in detail_dict
-            and detail_dict[BATCH_CHECKS_OVERRIDE_KEY] == "true"
+        BATCH_CHECKS_OVERRIDE_KEY in detail_dict
+        and detail_dict[BATCH_CHECKS_OVERRIDE_KEY] == "true"
     )
 
     if job_status not in FINISHED_JOB_STATUSES:

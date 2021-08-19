@@ -362,7 +362,7 @@ def clear_manifest_output(bucket, prefix):
         key_to_delete["Objects"].append(dict(Key=item["Key"]))
 
         # flush once aws limit reached
-        if len(key_to_delete["Objects"]) >= 1000:
+        if len(key_to_delete["Objects"]) == 1000:
             logger.info(f"Deleting 1000 objects")
             s3_client.delete_objects(Bucket=bucket, Delete=key_to_delete)
             key_to_delete = dict(Objects=[])

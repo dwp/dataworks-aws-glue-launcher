@@ -2,10 +2,12 @@
 
 """glue_launcher_lambda"""
 import pytest
+import boto3
 import os
 import argparse
 from datetime import datetime
 from glue_launcher_lambda import glue_launcher
+from moto import mock_s3
 
 import unittest
 from unittest import mock
@@ -766,6 +768,47 @@ class TestRetriever(unittest.TestCase):
             "/export",
             glue_mock.return_value,
         )
+
+    @mock_s3
+    @mock.patch("glue_launcher_lambda.glue_launcher.get_s3_client")
+    def test_clear_manifest_output(self, mock_get_s3):
+        bucket = "manifest_bucket"
+        prefix = "/business-data/manifest/query-output_streaming_main_incremental/templates"
+        s3_client = boto3.client(service_name='s3', region_name="eu-west-2")
+        s3_client.create_bucket(
+            Bucket=bucket,
+            CreateBucketConfiguration = {
+                'LocationConstraint': 'eu-west-2'
+
+            }
+        )
+
+        for n in range(5):
+            s3_client.put_object(
+                Body=f"File number {n}",
+                Bucket = bucket,
+                Key = f"{prefix}/{n}"
+            )
+
+        bucket_contents = s3_client.list_objects_v2(
+            Bucket = bucket,
+            Prefix = prefix
+        )
+        num_files = bucket_contents['KeyCount']
+
+        self.assertEqual(num_files, 5)
+
+        mock_get_s3.return_value = s3_client
+
+        glue_launcher.clear_manifest_output(bucket, prefix)
+
+        cleared_bucket_contents = s3_client.list_objects_v2(
+            Bucket = bucket,
+            Prefix = prefix
+        )
+        num_cleared_files = cleared_bucket_contents['KeyCount']
+
+        self.assertEqual(num_cleared_files, 0)
 
 
 if __name__ == "__main__":

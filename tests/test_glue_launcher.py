@@ -2,6 +2,7 @@
 
 """glue_launcher_lambda"""
 import argparse
+import logging
 import os
 import unittest
 from datetime import datetime
@@ -57,6 +58,7 @@ args.manifest_s3_input_parquet_location_mismatched_timestamps = "/mismatched_tim
 args.manifest_s3_output_location = "s3://bucket/output_location"
 args.manifest_s3_bucket = "bucket"
 args.manifest_s3_prefix = "output_location"
+args.manifest_deletion_prefixes = ["queries", "templates", "results"]
 
 
 class TestRetriever(unittest.TestCase):
@@ -774,25 +776,22 @@ class TestRetriever(unittest.TestCase):
 
     @mock_s3
     @mock.patch("glue_launcher_lambda.glue_launcher.get_s3_client")
-    def test_clear_manifest_output(self, mock_get_s3):
+    def test_clear_manifest_output_over_1000(self, mock_get_s3):
+        glue_launcher.logger = logging.getLogger()
         bucket = "manifest_bucket"
         prefix = (
-            "/business-data/manifest/query-output_streaming_main_incremental/templates"
+            "business-data/manifest/query-output_streaming_main_incremental/templates"
         )
-        s3_client = boto3.client(service_name="s3", region_name="eu-west-2")
-        s3_client.create_bucket(
-            Bucket=bucket, CreateBucketConfiguration={"LocationConstraint": "eu-west-2"}
-        )
+        s3_client = self.setup_s3(2450, bucket, prefix)
 
-        for n in range(5):
-            s3_client.put_object(
-                Body=f"File number {n}", Bucket=bucket, Key=f"{prefix}/{n}"
-            )
+        paginator = s3_client.get_paginator("list_objects_v2")
+        pages = paginator.paginate(Bucket=bucket, Prefix=prefix)
 
-        bucket_contents = s3_client.list_objects_v2(Bucket=bucket, Prefix=prefix)
-        num_files = bucket_contents["KeyCount"]
+        num_files = 0
+        for page in pages:
+            num_files += len(page["Contents"])
 
-        self.assertEqual(num_files, 5)
+        self.assertEqual(num_files, 2450)
 
         mock_get_s3.return_value = s3_client
 
@@ -804,6 +803,49 @@ class TestRetriever(unittest.TestCase):
         num_cleared_files = cleared_bucket_contents["KeyCount"]
 
         self.assertEqual(num_cleared_files, 0)
+
+    @mock_s3
+    @mock.patch("glue_launcher_lambda.glue_launcher.get_s3_client")
+    def test_clear_manifest_output_under_1000(self, mock_get_s3):
+        glue_launcher.logger = logging.getLogger()
+        bucket = "manifest_bucket"
+        prefix = (
+            "business-data/manifest/query-output_streaming_main_incremental/templates"
+        )
+        s3_client = self.setup_s3(450, bucket, prefix)
+
+        paginator = s3_client.get_paginator("list_objects_v2")
+        pages = paginator.paginate(Bucket=bucket, Prefix=prefix)
+
+        num_files = 0
+        for page in pages:
+            num_files += len(page["Contents"])
+
+        self.assertEqual(num_files, 450)
+
+        mock_get_s3.return_value = s3_client
+
+        glue_launcher.clear_manifest_output(bucket, prefix)
+
+        cleared_bucket_contents = s3_client.list_objects_v2(
+            Bucket=bucket, Prefix=prefix
+        )
+        num_cleared_files = cleared_bucket_contents["KeyCount"]
+
+        self.assertEqual(num_cleared_files, 0)
+
+    @staticmethod
+    def setup_s3(number_files, bucket, prefix):
+        s3_client = boto3.client(service_name="s3", region_name="eu-west-2")
+        s3_client.create_bucket(
+            Bucket=bucket, CreateBucketConfiguration={"LocationConstraint": "eu-west-2"}
+        )
+
+        for n in range(number_files):
+            s3_client.put_object(
+                Body=f"File number {n}", Bucket=bucket, Key=f"{prefix}/{n}"
+            )
+        return s3_client
 
 
 if __name__ == "__main__":

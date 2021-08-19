@@ -239,7 +239,7 @@ def get_parameters():
     if {"MANIFEST_S3_BUCKET", "MANIFEST_S3_PREFIX"}.issubset(os.environ):
         s3_bucket = os.environ["MANIFEST_S3_BUCKET"]
         s3_prefix = os.environ["MANIFEST_S3_PREFIX"]
-        _args.manifest_s3_output_location = f"s3://{s3_bucket}/{s3_prefix}"
+        _args.manifest_s3_output_location = f"s3://{s3_bucket}/{s3_prefix}/templates"
         _args.manifest_s3_bucket = s3_bucket
         _args.manifest_s3_prefix = s3_prefix
 
@@ -345,6 +345,7 @@ def check_running_batch_tasks(job_queue, batch_client):
 
 
 def clear_manifest_output(bucket, prefix):
+    logger.info(f"Clearing prefix {prefix}")
     s3_client = get_s3_client()
     paginator = s3_client.get_paginator("list_objects_v2")
     pages = paginator.paginate(Bucket=bucket, Prefix=prefix)
@@ -355,11 +356,13 @@ def clear_manifest_output(bucket, prefix):
 
         # flush once aws limit reached
         if len(key_to_delete["Objects"]) >= 1000:
+            logger.info(f"Deleting 1000 objects")
             s3_client.delete_objects(Bucket=bucket, Delete=key_to_delete)
             key_to_delete = dict(Objects=[])
 
     # flush rest
     if len(key_to_delete["Objects"]):
+        logger.info(f"Deleting {len(key_to_delete['Objects'])} objects from prefix {prefix}")
         s3_client.delete_objects(Bucket=bucket, Delete=key_to_delete)
 
 

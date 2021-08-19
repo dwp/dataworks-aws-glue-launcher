@@ -655,9 +655,9 @@ class TestRetriever(unittest.TestCase):
 
         clear_output_mock.assert_has_calls(
             [
-                call('bucket', 'output_location/queries'),
-                call('bucket', 'output_location/templates'),
-                call('bucket', 'output_location/results')
+                call("bucket", "output_location/queries"),
+                call("bucket", "output_location/templates"),
+                call("bucket", "output_location/results"),
             ]
         )
 
@@ -744,12 +744,11 @@ class TestRetriever(unittest.TestCase):
 
         clear_output_mock.assert_has_calls(
             [
-                call('bucket', 'output_location/queries'),
-                call('bucket', 'output_location/templates'),
-                call('bucket', 'output_location/results')
+                call("bucket", "output_location/queries"),
+                call("bucket", "output_location/templates"),
+                call("bucket", "output_location/results"),
             ]
         )
-
 
         running_batch_tasks.assert_not_called()
 

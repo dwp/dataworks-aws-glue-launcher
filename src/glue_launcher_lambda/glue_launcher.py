@@ -607,7 +607,9 @@ def handler(event, context):
         )
 
     for prefix_to_clear in ["queries", "templates", "results"]:
-        clear_manifest_output(args.manifest_s3_bucket, f"{args.manifest_s3_prefix}/{prefix_to_clear}")
+        clear_manifest_output(
+            args.manifest_s3_bucket, f"{args.manifest_s3_prefix}/{prefix_to_clear}"
+        )
 
     tables = fetch_table_creation_sql_files(SQL_LOCATION, args)
 

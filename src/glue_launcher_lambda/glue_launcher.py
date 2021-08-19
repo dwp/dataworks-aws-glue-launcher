@@ -236,12 +236,17 @@ def get_parameters():
             "MANIFEST_S3_INPUT_PARQUET_LOCATION_MISMATCHED_TIMESTAMPS"
         ]
 
-    if {"MANIFEST_S3_BUCKET", "MANIFEST_S3_PREFIX"}.issubset(os.environ):
-        s3_bucket = os.environ["MANIFEST_S3_BUCKET"]
-        s3_prefix = os.environ["MANIFEST_S3_PREFIX"]
-        _args.manifest_s3_output_location = f"s3://{s3_bucket}/{s3_prefix}/templates"
-        _args.manifest_s3_bucket = s3_bucket
-        _args.manifest_s3_prefix = s3_prefix
+    if "MANIFEST_S3_OUTPUT_LOCATION" in os.environ:
+        _args.manifest_s3_output_location = os.environ["MANIFEST_S3_OUTPUT_LOCATION"]
+
+    if "MANIFEST_S3_BUCKET" in os.environ:
+        _args.manifest_s3_bucket = os.environ["MANIFEST_S3_BUCKET"]
+
+    if "MANIFEST_S3_PREFIX" in os.environ:
+        _args.manifest_s3_prefix = os.environ["MANIFEST_S3_PREFIX"]
+
+    if "MANIFEST_DELETION_PREFIXES" in os.environ:
+        _args.manifest_deletion_prefixes = os.environ["MANIFEST_DELETION_PREFIXES"].split(',')
 
     return _args
 
@@ -611,7 +616,7 @@ def handler(event, context):
             f"Operational tasks is '{operational_tasks}', continuing to create Athena tables"
         )
 
-    for prefix_to_clear in ["queries", "templates", "results"]:
+    for prefix_to_clear in args.manifest_deletion_prefixes:
         clear_manifest_output(
             args.manifest_s3_bucket, f"{args.manifest_s3_prefix}/{prefix_to_clear}"
         )

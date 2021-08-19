@@ -58,6 +58,7 @@ args.manifest_s3_input_parquet_location_mismatched_timestamps = "/mismatched_tim
 args.manifest_s3_output_location = "s3://bucket/output_location"
 args.manifest_s3_bucket = "bucket"
 args.manifest_s3_prefix = "output_location"
+args.manifest_deletion_prefixes = ["queries", "templates", "results"]
 
 
 class TestRetriever(unittest.TestCase):

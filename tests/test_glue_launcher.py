@@ -592,6 +592,7 @@ class TestRetriever(unittest.TestCase):
         running_batch_tasks.assert_has_calls(calls)
         execute_glue.assert_not_called()
 
+    @mock.patch("glue_launcher_lambda.glue_launcher.clear_manifest_output")
     @mock.patch("glue_launcher_lambda.glue_launcher.generate_ms_epoch_from_timestamp")
     @mock.patch("glue_launcher_lambda.glue_launcher.execute_manifest_glue_job")
     @mock.patch("glue_launcher_lambda.glue_launcher.recreate_sql_tables")
@@ -622,6 +623,7 @@ class TestRetriever(unittest.TestCase):
         recreate_tables,
         execute_glue,
         epoch_mock,
+        clear_output_mock
     ):
 
         batch_client_mock.return_value = MagicMock()
@@ -657,6 +659,8 @@ class TestRetriever(unittest.TestCase):
 
         glue_launcher.handler(event, None)
 
+        clear_output_mock.assert_called_once_with(args.manifest_s3_bucket, args.manifest_s3_prefix)
+
         running_batch_tasks.assert_has_calls(check_batch_calls)
         assert running_batch_tasks.call_count == len(check_batch_calls)
         epoch_mock.assert_has_calls(epoch_mock_calls)
@@ -679,6 +683,7 @@ class TestRetriever(unittest.TestCase):
             glue_mock.return_value,
         )
 
+    @mock.patch("glue_launcher_lambda.glue_launcher.clear_manifest_output")
     @mock.patch("glue_launcher_lambda.glue_launcher.generate_ms_epoch_from_timestamp")
     @mock.patch("glue_launcher_lambda.glue_launcher.execute_manifest_glue_job")
     @mock.patch("glue_launcher_lambda.glue_launcher.recreate_sql_tables")
@@ -709,6 +714,7 @@ class TestRetriever(unittest.TestCase):
         recreate_tables,
         execute_glue,
         epoch_mock,
+        clear_output_mock
     ):
 
         athena_mock.return_value = MagicMock()
@@ -736,6 +742,8 @@ class TestRetriever(unittest.TestCase):
         epoch_mock.side_effect = ["12345", "23456", "23458"]
 
         glue_launcher.handler(event, None)
+
+        clear_output_mock.assert_called_once_with(args.manifest_s3_bucket, args.manifest_s3_prefix)
 
         running_batch_tasks.assert_not_called()
 

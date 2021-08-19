@@ -347,7 +347,7 @@ def check_running_batch_tasks(job_queue, batch_client):
 def clear_manifest_output(bucket, prefix):
     s3_client = get_s3_client()
     paginator = s3_client.get_paginator('list_objects_v2')
-    pages = paginator.paginate(Bucket=bucket, prefix=prefix)
+    pages = paginator.paginate(Bucket=bucket, Prefix=prefix)
 
     key_to_delete = dict(Objects=[])
     for item in pages.search('Contents'):

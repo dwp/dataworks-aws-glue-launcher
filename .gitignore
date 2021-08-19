@@ -3,3 +3,4 @@ dist/
 src/glue_launcher.egg-info
 .idea
 __pycache__
+venv/*

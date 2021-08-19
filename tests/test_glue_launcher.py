@@ -653,8 +653,12 @@ class TestRetriever(unittest.TestCase):
 
         glue_launcher.handler(event, None)
 
-        clear_output_mock.assert_called_once_with(
-            args.manifest_s3_bucket, args.manifest_s3_prefix
+        clear_output_mock.assert_has_calls(
+            [
+                call("bucket", "output_location/queries"),
+                call("bucket", "output_location/templates"),
+                call("bucket", "output_location/results"),
+            ]
         )
 
         running_batch_tasks.assert_has_calls(check_batch_calls)
@@ -738,8 +742,12 @@ class TestRetriever(unittest.TestCase):
 
         glue_launcher.handler(event, None)
 
-        clear_output_mock.assert_called_once_with(
-            args.manifest_s3_bucket, args.manifest_s3_prefix
+        clear_output_mock.assert_has_calls(
+            [
+                call("bucket", "output_location/queries"),
+                call("bucket", "output_location/templates"),
+                call("bucket", "output_location/results"),
+            ]
         )
 
         running_batch_tasks.assert_not_called()

@@ -1,13 +1,14 @@
-import logging
-import os
-import sys
 import argparse
 import json
+import logging
+import os
 import socket
-import boto3
-import botocore
+import sys
 import time
 from datetime import datetime, timedelta
+
+import boto3
+import botocore
 
 logger = None
 args = None
@@ -235,8 +236,12 @@ def get_parameters():
             "MANIFEST_S3_INPUT_PARQUET_LOCATION_MISMATCHED_TIMESTAMPS"
         ]
 
-    if "MANIFEST_S3_OUTPUT_LOCATION" in os.environ:
-        _args.manifest_s3_output_location = os.environ["MANIFEST_S3_OUTPUT_LOCATION"]
+    if {"MANIFEST_S3_BUCKET", "MANIFEST_S3_PREFIX"}.issubset(os.environ):
+        s3_bucket = os.environ["MANIFEST_S3_BUCKET"]
+        s3_prefix = os.environ["MANIFEST_S3_PREFIX"]
+        _args.manifest_s3_output_location = f"s3://{s3_bucket}/{s3_prefix}"
+        _args.manifest_s3_bucket = s3_bucket
+        _args.manifest_s3_prefix = s3_prefix
 
     return _args
 
@@ -304,6 +309,10 @@ def get_glue_client():
     return boto3.client("glue", config=boto_client_config)
 
 
+def get_s3_client():
+    return boto3.client("s3", config=boto_client_config)
+
+
 def check_running_batch_tasks(job_queue, batch_client):
     """Check the AWS Batch job queue, return count of tasks in each status"""
 
@@ -333,6 +342,25 @@ def check_running_batch_tasks(job_queue, batch_client):
             next_token = response.get("nextToken", None)
 
     return operational_tasks
+
+
+def clear_manifest_output(bucket, prefix):
+    s3_client = get_s3_client()
+    paginator = s3_client.get_paginator("list_objects_v2")
+    pages = paginator.paginate(Bucket=bucket, Prefix=prefix)
+
+    key_to_delete = dict(Objects=[])
+    for item in pages.search("Contents"):
+        key_to_delete["Objects"].append(dict(Key=item["Key"]))
+
+        # flush once aws limit reached
+        if len(key_to_delete["Objects"]) >= 1000:
+            s3_client.delete_objects(Bucket=bucket, Delete=key_to_delete)
+            key_to_delete = dict(Objects=[])
+
+    # flush rest
+    if len(key_to_delete["Objects"]):
+        s3_client.delete_objects(Bucket=bucket, Delete=key_to_delete)
 
 
 def fetch_table_creation_sql_files(file_path, args):
@@ -577,6 +605,8 @@ def handler(event, context):
         logger.info(
             f"Operational tasks is '{operational_tasks}', continuing to create Athena tables"
         )
+
+    clear_manifest_output(args.manifest_s3_bucket, args.manifest_s3_prefix)
 
     tables = fetch_table_creation_sql_files(SQL_LOCATION, args)
 

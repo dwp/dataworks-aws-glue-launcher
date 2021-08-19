@@ -1,15 +1,17 @@
 #!/usr/bin/env python3
 
 """glue_launcher_lambda"""
-import pytest
-import os
 import argparse
-from datetime import datetime
-from glue_launcher_lambda import glue_launcher
-
+import os
 import unittest
+from datetime import datetime
 from unittest import mock
 from unittest.mock import call, MagicMock
+
+import boto3
+import pytest
+from glue_launcher_lambda import glue_launcher
+from moto import mock_s3
 
 JOB_NAME_KEY = "jobName"
 JOB_STATUS_KEY = "status"
@@ -53,6 +55,8 @@ args.manifest_s3_input_parquet_location_missing_export = "/missing_exports"
 args.manifest_s3_input_parquet_location_counts = "/counts"
 args.manifest_s3_input_parquet_location_mismatched_timestamps = "/mismatched_timestamps"
 args.manifest_s3_output_location = "s3://bucket/output_location"
+args.manifest_s3_bucket = "bucket"
+args.manifest_s3_prefix = "output_location"
 
 
 class TestRetriever(unittest.TestCase):
@@ -189,7 +193,6 @@ class TestRetriever(unittest.TestCase):
     @mock.patch("glue_launcher_lambda.glue_launcher.logger")
     @mock.patch("glue_launcher_lambda.glue_launcher.get_batch_client")
     def test_batch_tasks_running(self, batch_client_mock, logger):
-
         batch_client_mock.list_jobs.side_effect = [
             {"jobSummaryList": [3]},
             {"jobSummaryList": [1], "nextToken": "1400"},
@@ -228,7 +231,6 @@ class TestRetriever(unittest.TestCase):
         mock_logger,
         execute_athena_mock,
     ):
-
         athena_client_mock = mock
 
         with open(os.path.join(SQL_FILE_LOCATION, "drop-table.sql"), "r") as f:
@@ -271,7 +273,6 @@ class TestRetriever(unittest.TestCase):
         mock_logger,
         execute_athena_mock,
     ):
-
         athena_client_mock = mock
 
         with open(os.path.join(SQL_FILE_LOCATION, "drop-table.sql"), "r") as f:
@@ -330,7 +331,6 @@ class TestRetriever(unittest.TestCase):
     @mock.patch("glue_launcher_lambda.glue_launcher.get_glue_client")
     @mock.patch("glue_launcher_lambda.glue_launcher.logger")
     def test_execute_manifest_glue_job(self, mock_logger, glue_client_mock):
-
         glue_client_mock.start_job_run = MagicMock()
         glue_client_mock.start_job_run.return_value = {"JobRunId": "12"}
 
@@ -373,7 +373,6 @@ class TestRetriever(unittest.TestCase):
         athena_client_mock,
         poll_athena_mock,
     ):
-
         get_params_mock.return_value = args
         athena_client_mock.start_query_execution.return_value = {
             "QueryExecutionId": "12"
@@ -514,7 +513,6 @@ class TestRetriever(unittest.TestCase):
         running_batch_tasks,
         execute_glue,
     ):
-
         batch_mock.return_value = MagicMock()
 
         parameters_mock.return_value = args
@@ -561,7 +559,6 @@ class TestRetriever(unittest.TestCase):
         running_batch_tasks,
         execute_glue,
     ):
-
         batch_mock.return_value = MagicMock()
 
         parameters_mock.return_value = args
@@ -590,6 +587,7 @@ class TestRetriever(unittest.TestCase):
         running_batch_tasks.assert_has_calls(calls)
         execute_glue.assert_not_called()
 
+    @mock.patch("glue_launcher_lambda.glue_launcher.clear_manifest_output")
     @mock.patch("glue_launcher_lambda.glue_launcher.generate_ms_epoch_from_timestamp")
     @mock.patch("glue_launcher_lambda.glue_launcher.execute_manifest_glue_job")
     @mock.patch("glue_launcher_lambda.glue_launcher.recreate_sql_tables")
@@ -620,8 +618,8 @@ class TestRetriever(unittest.TestCase):
         recreate_tables,
         execute_glue,
         epoch_mock,
+        clear_output_mock,
     ):
-
         batch_client_mock.return_value = MagicMock()
         athena_mock.return_value = MagicMock()
         glue_mock.return_value = MagicMock()
@@ -655,6 +653,10 @@ class TestRetriever(unittest.TestCase):
 
         glue_launcher.handler(event, None)
 
+        clear_output_mock.assert_called_once_with(
+            args.manifest_s3_bucket, args.manifest_s3_prefix
+        )
+
         running_batch_tasks.assert_has_calls(check_batch_calls)
         assert running_batch_tasks.call_count == len(check_batch_calls)
         epoch_mock.assert_has_calls(epoch_mock_calls)
@@ -677,6 +679,7 @@ class TestRetriever(unittest.TestCase):
             glue_mock.return_value,
         )
 
+    @mock.patch("glue_launcher_lambda.glue_launcher.clear_manifest_output")
     @mock.patch("glue_launcher_lambda.glue_launcher.generate_ms_epoch_from_timestamp")
     @mock.patch("glue_launcher_lambda.glue_launcher.execute_manifest_glue_job")
     @mock.patch("glue_launcher_lambda.glue_launcher.recreate_sql_tables")
@@ -707,8 +710,8 @@ class TestRetriever(unittest.TestCase):
         recreate_tables,
         execute_glue,
         epoch_mock,
+        clear_output_mock,
     ):
-
         athena_mock.return_value = MagicMock()
         glue_mock.return_value = MagicMock()
 
@@ -735,6 +738,10 @@ class TestRetriever(unittest.TestCase):
 
         glue_launcher.handler(event, None)
 
+        clear_output_mock.assert_called_once_with(
+            args.manifest_s3_bucket, args.manifest_s3_prefix
+        )
+
         running_batch_tasks.assert_not_called()
 
         epoch_mock.assert_has_calls(epoch_mock_calls)
@@ -756,6 +763,39 @@ class TestRetriever(unittest.TestCase):
             "/export",
             glue_mock.return_value,
         )
+
+    @mock_s3
+    @mock.patch("glue_launcher_lambda.glue_launcher.get_s3_client")
+    def test_clear_manifest_output(self, mock_get_s3):
+        bucket = "manifest_bucket"
+        prefix = (
+            "/business-data/manifest/query-output_streaming_main_incremental/templates"
+        )
+        s3_client = boto3.client(service_name="s3", region_name="eu-west-2")
+        s3_client.create_bucket(
+            Bucket=bucket, CreateBucketConfiguration={"LocationConstraint": "eu-west-2"}
+        )
+
+        for n in range(5):
+            s3_client.put_object(
+                Body=f"File number {n}", Bucket=bucket, Key=f"{prefix}/{n}"
+            )
+
+        bucket_contents = s3_client.list_objects_v2(Bucket=bucket, Prefix=prefix)
+        num_files = bucket_contents["KeyCount"]
+
+        self.assertEqual(num_files, 5)
+
+        mock_get_s3.return_value = s3_client
+
+        glue_launcher.clear_manifest_output(bucket, prefix)
+
+        cleared_bucket_contents = s3_client.list_objects_v2(
+            Bucket=bucket, Prefix=prefix
+        )
+        num_cleared_files = cleared_bucket_contents["KeyCount"]
+
+        self.assertEqual(num_cleared_files, 0)
 
 
 if __name__ == "__main__":

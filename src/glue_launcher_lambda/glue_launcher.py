@@ -309,6 +309,10 @@ def get_glue_client():
     return boto3.client("glue", config=boto_client_config)
 
 
+def get_s3_client():
+    return boto3.client("s3", config=boto_client_config)
+
+
 def check_running_batch_tasks(job_queue, batch_client):
     """Check the AWS Batch job queue, return count of tasks in each status"""
 
@@ -340,8 +344,23 @@ def check_running_batch_tasks(job_queue, batch_client):
     return operational_tasks
 
 
-def clear_manifest_output():
-    pass
+def clear_manifest_output(bucket, prefix):
+    s3_client = get_s3_client()
+    paginator = s3_client.get_paginator('list_objects_v2')
+    pages = paginator.paginate(Bucket=bucket, prefix=prefix)
+
+    key_to_delete = dict(Objects=[])
+    for item in pages.search('Contents'):
+        key_to_delete['Objects'].append(dict(Key=item['Key']))
+
+        # flush once aws limit reached
+        if len(key_to_delete['Objects']) >= 1000:
+            s3_client.delete_objects(Bucket=bucket, Delete=key_to_delete)
+            key_to_delete = dict(Objects=[])
+
+    # flush rest
+    if len(key_to_delete['Objects']):
+        s3_client.delete_objects(Bucket=bucket, Delete=key_to_delete)
 
 
 def fetch_table_creation_sql_files(file_path, args):
@@ -587,7 +606,7 @@ def handler(event, context):
             f"Operational tasks is '{operational_tasks}', continuing to create Athena tables"
         )
 
-    clear_manifest_output()
+    clear_manifest_output(args.manifest_s3_bucket, args.manifest_s3_prefix)
 
     tables = fetch_table_creation_sql_files(SQL_LOCATION, args)
 

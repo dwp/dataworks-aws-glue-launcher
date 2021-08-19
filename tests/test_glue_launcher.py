@@ -53,6 +53,8 @@ args.manifest_s3_input_parquet_location_missing_export = "/missing_exports"
 args.manifest_s3_input_parquet_location_counts = "/counts"
 args.manifest_s3_input_parquet_location_mismatched_timestamps = "/mismatched_timestamps"
 args.manifest_s3_output_location = "s3://bucket/output_location"
+args.manifest_s3_bucket = "bucket"
+args.manifest_s3_prefix = "output_location"
 
 
 class TestRetriever(unittest.TestCase):

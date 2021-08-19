@@ -246,7 +246,9 @@ def get_parameters():
         _args.manifest_s3_prefix = os.environ["MANIFEST_S3_PREFIX"]
 
     if "MANIFEST_DELETION_PREFIXES" in os.environ:
-        _args.manifest_deletion_prefixes = os.environ["MANIFEST_DELETION_PREFIXES"].split(',')
+        _args.manifest_deletion_prefixes = os.environ[
+            "MANIFEST_DELETION_PREFIXES"
+        ].split(",")
 
     return _args
 

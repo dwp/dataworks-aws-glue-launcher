@@ -606,7 +606,8 @@ def handler(event, context):
             f"Operational tasks is '{operational_tasks}', continuing to create Athena tables"
         )
 
-    clear_manifest_output(args.manifest_s3_bucket, args.manifest_s3_prefix)
+    for prefix_to_clear in ["queries", "templates", "results"]:
+        clear_manifest_output(args.manifest_s3_bucket, f"{args.manifest_s3_prefix}/{prefix_to_clear}")
 
     tables = fetch_table_creation_sql_files(SQL_LOCATION, args)
 

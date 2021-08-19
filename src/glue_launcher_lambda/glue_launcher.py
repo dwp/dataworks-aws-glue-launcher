@@ -248,7 +248,7 @@ def get_parameters():
     if "MANIFEST_DELETION_PREFIXES" in os.environ:
         _args.manifest_deletion_prefixes = os.environ[
             "MANIFEST_DELETION_PREFIXES"
-        ].split(",")
+        ].remove(" ","").split(",")
 
     return _args
 

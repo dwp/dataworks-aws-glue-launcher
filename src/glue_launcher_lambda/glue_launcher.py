@@ -362,7 +362,9 @@ def clear_manifest_output(bucket, prefix):
 
     # flush rest
     if len(key_to_delete["Objects"]):
-        logger.info(f"Deleting {len(key_to_delete['Objects'])} objects from prefix {prefix}")
+        logger.info(
+            f"Deleting {len(key_to_delete['Objects'])} objects from prefix {prefix}"
+        )
         s3_client.delete_objects(Bucket=bucket, Delete=key_to_delete)
 
 

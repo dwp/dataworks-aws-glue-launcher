@@ -368,7 +368,7 @@ def clear_manifest_output(bucket, prefix):
                 logger.info(f"Deleting 1000 objects")
                 response = s3_client.delete_objects(Bucket=bucket, Delete=key_to_delete)
                 logger.info(f"Response from s3 deletion {response}")
-                key_to_delete = dict(Objects=[])
+                key_to_delete = dict(Objects=[], Quiet=True)
 
         # flush rest
         if len(key_to_delete["Objects"]):

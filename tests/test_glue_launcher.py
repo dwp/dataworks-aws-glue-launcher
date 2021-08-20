@@ -834,6 +834,30 @@ class TestRetriever(unittest.TestCase):
 
         self.assertEqual(num_cleared_files, 0)
 
+    @mock_s3
+    @mock.patch("glue_launcher_lambda.glue_launcher.get_s3_client")
+    def test_clear_manifest_output_no_files(self, mock_get_s3):
+        glue_launcher.logger = logging.getLogger()
+        bucket = "manifest_bucket"
+        prefix = (
+            "business-data/manifest/query-output_streaming_main_incremental/templates"
+        )
+        s3_client = self.setup_s3(0, bucket, prefix)
+
+        paginator = s3_client.get_paginator("list_objects_v2")
+        pages = paginator.paginate(Bucket=bucket, Prefix=prefix)
+
+        num_files = 0
+        for page in pages:
+            num_files += page["KeyCount"]
+
+        self.assertEqual(num_files, 0)
+
+        mock_get_s3.return_value = s3_client
+
+        glue_launcher.clear_manifest_output(bucket, prefix)
+
+
     @staticmethod
     def setup_s3(number_files, bucket, prefix):
         s3_client = boto3.client(service_name="s3", region_name="eu-west-2")

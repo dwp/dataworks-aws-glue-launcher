@@ -775,8 +775,7 @@ class TestRetriever(unittest.TestCase):
         )
 
     @mock_s3
-    @mock.patch("glue_launcher_lambda.glue_launcher.get_s3_client")
-    def test_clear_manifest_output_over_1000(self, mock_get_s3):
+    def test_clear_manifest_output_over_1000(self):
         glue_launcher.logger = logging.getLogger()
         bucket = "manifest_bucket"
         prefix = (
@@ -793,8 +792,6 @@ class TestRetriever(unittest.TestCase):
 
         self.assertEqual(num_files, 2450)
 
-        mock_get_s3.return_value = s3_client
-
         glue_launcher.clear_manifest_output(bucket, prefix)
 
         cleared_bucket_contents = s3_client.list_objects_v2(
@@ -805,8 +802,7 @@ class TestRetriever(unittest.TestCase):
         self.assertEqual(num_cleared_files, 0)
 
     @mock_s3
-    @mock.patch("glue_launcher_lambda.glue_launcher.get_s3_client")
-    def test_clear_manifest_output_under_1000(self, mock_get_s3):
+    def test_clear_manifest_output_under_1000(self):
         glue_launcher.logger = logging.getLogger()
         bucket = "manifest_bucket"
         prefix = (
@@ -823,8 +819,6 @@ class TestRetriever(unittest.TestCase):
 
         self.assertEqual(num_files, 450)
 
-        mock_get_s3.return_value = s3_client
-
         glue_launcher.clear_manifest_output(bucket, prefix)
 
         cleared_bucket_contents = s3_client.list_objects_v2(
@@ -833,6 +827,54 @@ class TestRetriever(unittest.TestCase):
         num_cleared_files = cleared_bucket_contents["KeyCount"]
 
         self.assertEqual(num_cleared_files, 0)
+
+    @mock_s3
+    def test_clear_manifest_output_no_files(self):
+        glue_launcher.logger = logging.getLogger()
+        bucket = "manifest_bucket"
+        prefix = (
+            "business-data/manifest/query-output_streaming_main_incremental/templates"
+        )
+        s3_client = self.setup_s3(0, bucket, prefix)
+
+        paginator = s3_client.get_paginator("list_objects_v2")
+        pages = paginator.paginate(Bucket=bucket, Prefix=prefix)
+
+        num_files = 0
+        for page in pages:
+            num_files += page["KeyCount"]
+
+        self.assertEqual(num_files, 0)
+
+        glue_launcher.clear_manifest_output(bucket, prefix)
+
+    @mock_s3
+    def test_s3_key_exists(self):
+        bucket = "manifest_bucket"
+        prefix = (
+            "business-data/manifest/query-output_streaming_main_incremental/templates"
+        )
+        s3_client = self.setup_s3(5, bucket, prefix)
+
+        paginator = s3_client.get_paginator("list_objects_v2")
+        pages = paginator.paginate(Bucket=bucket, Prefix=prefix)
+
+        result = glue_launcher.does_s3_key_exist(pages)
+        self.assertTrue(result)
+
+    @mock_s3
+    def test_s3_key_doest_exist(self):
+        bucket = "manifest_bucket"
+        prefix = (
+            "business-data/manifest/query-output_streaming_main_incremental/templates"
+        )
+        s3_client = self.setup_s3(0, bucket, prefix)
+
+        paginator = s3_client.get_paginator("list_objects_v2")
+        pages = paginator.paginate(Bucket=bucket, Prefix=prefix)
+
+        result = glue_launcher.does_s3_key_exist(pages)
+        self.assertFalse(result)
 
     @staticmethod
     def setup_s3(number_files, bucket, prefix):

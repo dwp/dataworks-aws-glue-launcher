@@ -357,22 +357,34 @@ def clear_manifest_output(bucket, prefix):
     paginator = s3_client.get_paginator("list_objects_v2")
     pages = paginator.paginate(Bucket=bucket, Prefix=prefix)
 
-    key_to_delete = dict(Objects=[])
-    for item in pages.search("Contents"):
-        key_to_delete["Objects"].append(dict(Key=item["Key"]))
+    if does_s3_key_exist(pages):
 
-        # flush once aws limit reached
-        if len(key_to_delete["Objects"]) == 1000:
-            logger.info(f"Deleting 1000 objects")
+        key_to_delete = dict(Objects=[], Quiet=True)
+        for item in pages.search("Contents"):
+            key_to_delete["Objects"].append(dict(Key=item["Key"]))
+
+            # flush once aws limit reached
+            if len(key_to_delete["Objects"]) == 1000:
+                logger.info(f"Deleting 1000 objects")
+                response = s3_client.delete_objects(Bucket=bucket, Delete=key_to_delete)
+                logger.info(f"Response from s3 deletion {response}")
+                key_to_delete = dict(Objects=[], Quiet=True)
+
+        # flush rest
+        if len(key_to_delete["Objects"]):
+            logger.info(
+                f"Deleting {len(key_to_delete['Objects'])} objects from prefix {prefix}"
+            )
             s3_client.delete_objects(Bucket=bucket, Delete=key_to_delete)
-            key_to_delete = dict(Objects=[])
 
-    # flush rest
-    if len(key_to_delete["Objects"]):
-        logger.info(
-            f"Deleting {len(key_to_delete['Objects'])} objects from prefix {prefix}"
-        )
-        s3_client.delete_objects(Bucket=bucket, Delete=key_to_delete)
+
+def does_s3_key_exist(paginator_pages):
+    key_count = 0
+    for page in paginator_pages:
+        key_count += page["KeyCount"]
+        if key_count > 0:
+            return True
+    return False
 
 
 def fetch_table_creation_sql_files(file_path, args):

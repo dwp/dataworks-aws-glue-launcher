@@ -775,8 +775,7 @@ class TestRetriever(unittest.TestCase):
         )
 
     @mock_s3
-    @mock.patch("glue_launcher_lambda.glue_launcher.get_s3_client")
-    def test_clear_manifest_output_over_1000(self, mock_get_s3):
+    def test_clear_manifest_output_over_1000(self):
         glue_launcher.logger = logging.getLogger()
         bucket = "manifest_bucket"
         prefix = (
@@ -793,8 +792,6 @@ class TestRetriever(unittest.TestCase):
 
         self.assertEqual(num_files, 2450)
 
-        mock_get_s3.return_value = s3_client
-
         glue_launcher.clear_manifest_output(bucket, prefix)
 
         cleared_bucket_contents = s3_client.list_objects_v2(
@@ -805,8 +802,7 @@ class TestRetriever(unittest.TestCase):
         self.assertEqual(num_cleared_files, 0)
 
     @mock_s3
-    @mock.patch("glue_launcher_lambda.glue_launcher.get_s3_client")
-    def test_clear_manifest_output_under_1000(self, mock_get_s3):
+    def test_clear_manifest_output_under_1000(self):
         glue_launcher.logger = logging.getLogger()
         bucket = "manifest_bucket"
         prefix = (
@@ -823,8 +819,6 @@ class TestRetriever(unittest.TestCase):
 
         self.assertEqual(num_files, 450)
 
-        mock_get_s3.return_value = s3_client
-
         glue_launcher.clear_manifest_output(bucket, prefix)
 
         cleared_bucket_contents = s3_client.list_objects_v2(
@@ -835,8 +829,7 @@ class TestRetriever(unittest.TestCase):
         self.assertEqual(num_cleared_files, 0)
 
     @mock_s3
-    @mock.patch("glue_launcher_lambda.glue_launcher.get_s3_client")
-    def test_clear_manifest_output_no_files(self, mock_get_s3):
+    def test_clear_manifest_output_no_files(self):
         glue_launcher.logger = logging.getLogger()
         bucket = "manifest_bucket"
         prefix = (
@@ -852,8 +845,6 @@ class TestRetriever(unittest.TestCase):
             num_files += page["KeyCount"]
 
         self.assertEqual(num_files, 0)
-
-        mock_get_s3.return_value = s3_client
 
         glue_launcher.clear_manifest_output(bucket, prefix)
 

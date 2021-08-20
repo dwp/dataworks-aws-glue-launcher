@@ -171,8 +171,8 @@ def get_parameters():
 
     if "MANIFEST_COMPARISON_CUT_OFF_DATE_START" in os.environ:
         if (
-                os.environ["MANIFEST_COMPARISON_CUT_OFF_DATE_START"].upper()
-                == "PREVIOUS_DAY_MIDNIGHT"
+            os.environ["MANIFEST_COMPARISON_CUT_OFF_DATE_START"].upper()
+            == "PREVIOUS_DAY_MIDNIGHT"
         ):
             _args.manifest_comparison_cut_off_date_start = get_previous_midnight()
         else:
@@ -186,8 +186,8 @@ def get_parameters():
 
     if "MANIFEST_COMPARISON_CUT_OFF_DATE_END" in os.environ:
         if (
-                os.environ["MANIFEST_COMPARISON_CUT_OFF_DATE_END"].upper()
-                == "TODAY_MIDNIGHT"
+            os.environ["MANIFEST_COMPARISON_CUT_OFF_DATE_END"].upper()
+            == "TODAY_MIDNIGHT"
         ):
             _args.manifest_comparison_cut_off_date_end = get_today_midnight()
         else:
@@ -392,14 +392,14 @@ def fetch_table_creation_sql_files(file_path, args):
         base_create_parquet_query = f.read()
 
     with open(
-            os.path.join(file_path, "create-missing-import-table.sql"),
-            "r",
+        os.path.join(file_path, "create-missing-import-table.sql"),
+        "r",
     ) as f:
         base_create_missing_import_query = f.read()
 
     with open(
-            os.path.join(file_path, "create-missing-export-table.sql"),
-            "r",
+        os.path.join(file_path, "create-missing-export-table.sql"),
+        "r",
     ) as f:
         base_create_missing_export_query = f.read()
 
@@ -514,15 +514,15 @@ def recreate_sql_tables(tables, drop_query, athena_client):
 
 
 def execute_manifest_glue_job(
-        job_name,
-        cut_off_time_start,
-        cut_off_time_end,
-        margin_of_error,
-        snapshot_type,
-        import_type,
-        import_prefix,
-        export_prefix,
-        glue_client,
+    job_name,
+    cut_off_time_start,
+    cut_off_time_end,
+    margin_of_error,
+    snapshot_type,
+    import_type,
+    import_prefix,
+    export_prefix,
+    glue_client,
 ):
     """Executes the given job in aws glue.
     Keyword arguments:
@@ -592,8 +592,8 @@ def handler(event, context):
     job_queue = detail_dict[JOB_QUEUE_KEY]
 
     override_batch_checks = (
-            BATCH_CHECKS_OVERRIDE_KEY in detail_dict
-            and detail_dict[BATCH_CHECKS_OVERRIDE_KEY] == "true"
+        BATCH_CHECKS_OVERRIDE_KEY in detail_dict
+        and detail_dict[BATCH_CHECKS_OVERRIDE_KEY] == "true"
     )
 
     if job_status not in FINISHED_JOB_STATUSES:
@@ -634,7 +634,6 @@ def handler(event, context):
         clear_manifest_output(
             args.manifest_s3_bucket, f"{args.manifest_s3_prefix}/{prefix_to_clear}"
         )
-
 
     tables = fetch_table_creation_sql_files(SQL_LOCATION, args)
 

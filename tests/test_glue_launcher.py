@@ -857,7 +857,6 @@ class TestRetriever(unittest.TestCase):
 
         glue_launcher.clear_manifest_output(bucket, prefix)
 
-
     @staticmethod
     def setup_s3(number_files, bucket, prefix):
         s3_client = boto3.client(service_name="s3", region_name="eu-west-2")

@@ -251,7 +251,9 @@ def get_parameters():
         )
 
     if "MANIFEST_PARQUET_S3_BASE_LOCATION" in os.environ:
-        _args.manifest_parquet_s3_base_location = os.environ["MANIFEST_PARQUET_S3_BASE_LOCATION"]
+        _args.manifest_parquet_s3_base_location = os.environ[
+            "MANIFEST_PARQUET_S3_BASE_LOCATION"
+        ]
 
     return _args
 

@@ -250,6 +250,9 @@ def get_parameters():
             os.environ["MANIFEST_DELETION_PREFIXES"].replace(" ", "").split(",")
         )
 
+    if "MANIFEST_PARQUET_S3_BASE_LOCATION" in os.environ:
+        _args.manifest_parquet_s3_base_location = os.environ["MANIFEST_PARQUET_S3_BASE_LOCATION"]
+
     return _args
 
 
@@ -633,6 +636,11 @@ def handler(event, context):
     for prefix_to_clear in args.manifest_deletion_prefixes:
         clear_manifest_output(
             args.manifest_s3_bucket, f"{args.manifest_s3_prefix}/{prefix_to_clear}"
+        )
+
+    if args.manifest_parquet_s3_base_location:
+        clear_manifest_output(
+            args.manifest_s3_bucket, f"{args.manifest_parquet_s3_base_location}"
         )
 
     tables = fetch_table_creation_sql_files(SQL_LOCATION, args)

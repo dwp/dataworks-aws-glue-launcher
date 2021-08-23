@@ -626,7 +626,10 @@ class TestRetriever(unittest.TestCase):
         athena_mock.return_value = MagicMock()
         glue_mock.return_value = MagicMock()
 
-        parameters_mock.return_value = args
+        test_args = args
+        test_args.manifest_parquet_s3_base_location = "output_location/parquet"
+
+        parameters_mock.return_value = test_args
         dumped_event.return_value = "{}"
         job_details_validator.return_value = {
             "jobName": "job",
@@ -660,6 +663,7 @@ class TestRetriever(unittest.TestCase):
                 call("bucket", "output_location/queries"),
                 call("bucket", "output_location/templates"),
                 call("bucket", "output_location/results"),
+                call("bucket", "output_location/parquet"),
             ]
         )
 

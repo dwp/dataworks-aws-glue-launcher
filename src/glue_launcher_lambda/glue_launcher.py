@@ -199,6 +199,11 @@ def get_parameters():
     else:
         _args.manifest_comparison_cut_off_date_end = get_today_midnight()
 
+    if "MAX_DAILY_RUNS" in os.environ:
+        _args.max_daily_runs = os.environ["MAX_DAILY_RUNS"]
+    else:
+        _args.max_daily_runs = "5"
+
     if "MANIFEST_COMPARISON_MARGIN_OF_ERROR_MINUTES" in os.environ:
         _args.manifest_comparison_margin_of_error_minutes = os.environ[
             "MANIFEST_COMPARISON_MARGIN_OF_ERROR_MINUTES"
@@ -539,6 +544,7 @@ def execute_manifest_glue_job(
     import_type -- the type of import manifests with no space, i.e. "streaming_main" or "streaming_equality"
     import_prefix -- the base s3 prefix for the import data
     export_prefix -- the base s3 prefix for the export data
+    glue_client -- the glue boto3 client
     """
     logger.info(f"Executing glue job with name of '{job_name}'")
 
@@ -571,6 +577,35 @@ def execute_manifest_glue_job(
     )
     job_run_id = job_run_start_result["JobRunId"]
     logger.info(f"Glue job with name of {job_name} started run with id of {job_run_id}")
+
+
+def get_daily_run_count(
+    job_name,
+    glue_client,
+    today,
+):
+    """Returns the number of times that day that the glue job has run.
+    Keyword arguments:
+    job_name -- (string) the name of the job to execute
+    glue_client -- (object) the glue boto3 client
+    today -- (datetime) today's date
+    """
+    logger.info(f"Getting daily run count for job with name of '{job_name}'")
+
+    response = glue_client.get_job_runs(
+        JobName=job_name,
+    )
+    last_50_job_run_dates = [job_run["StartedOn"] for job_run in response["JobRuns"]]
+    job_run_daily_count = sum(
+        1 if job_run_date.date() == today else 0
+        for job_run_date in last_50_job_run_dates
+    )
+
+    logger.info(
+        f"Number of daily runs for job with name of '{job_name}' is '{job_run_daily_count}"
+    )
+
+    return job_run_daily_count
 
 
 def handler(event, context):
@@ -654,21 +689,36 @@ def handler(event, context):
         f"Created Athena tables. Launching glue job '{args.etl_glue_job_name}' now"
     )
 
-    execute_manifest_glue_job(
-        args.etl_glue_job_name,
-        generate_ms_epoch_from_timestamp(args.manifest_comparison_cut_off_date_start),
-        generate_ms_epoch_from_timestamp(args.manifest_comparison_cut_off_date_end),
-        generate_ms_epoch_from_timestamp(
-            args.manifest_comparison_cut_off_date_end,
-            int(args.manifest_comparison_margin_of_error_minutes),
-        ),
-        args.manifest_comparison_snapshot_type,
-        args.manifest_comparison_import_type,
-        args.manifest_s3_input_location_import,
-        args.manifest_s3_input_location_export,
-        get_glue_client(),
+    glue_client = get_glue_client()
+
+    daily_run_count = get_daily_run_count(
+        job_name,
+        glue_client,
+        datetime.today().date(),
     )
-    logger.info("Launched Glue Job - exiting")
+
+    if daily_run_count < int(args.max_daily_runs):
+        execute_manifest_glue_job(
+            args.etl_glue_job_name,
+            generate_ms_epoch_from_timestamp(
+                args.manifest_comparison_cut_off_date_start
+            ),
+            generate_ms_epoch_from_timestamp(args.manifest_comparison_cut_off_date_end),
+            generate_ms_epoch_from_timestamp(
+                args.manifest_comparison_cut_off_date_end,
+                int(args.manifest_comparison_margin_of_error_minutes),
+            ),
+            args.manifest_comparison_snapshot_type,
+            args.manifest_comparison_import_type,
+            args.manifest_s3_input_location_import,
+            args.manifest_s3_input_location_export,
+            glue_client,
+        )
+        logger.info("Launched Glue Job - exiting")
+    else:
+        logger.info(
+            f"Not launching Glue Job as current daily run count ('{daily_run_count}') is at or above max run count ('{args.max_daily_runs}')"
+        )
 
 
 if __name__ == "__main__":

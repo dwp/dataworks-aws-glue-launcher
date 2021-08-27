@@ -371,7 +371,9 @@ class TestRetriever(unittest.TestCase):
         yesterday = today + timedelta(days=-1)
 
         glue_client_mock.get_job_runs = MagicMock()
-        glue_client_mock.get_job_runs.return_value = {"JobRuns": [ {"StartedOn": today},{"StartedOn": yesterday}]}
+        glue_client_mock.get_job_runs.return_value = {
+            "JobRuns": [{"StartedOn": today}, {"StartedOn": yesterday}]
+        }
 
         expected = 1
         actual = glue_launcher.get_daily_run_count(

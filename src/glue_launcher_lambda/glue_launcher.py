@@ -596,9 +596,14 @@ def get_daily_run_count(
         JobName=job_name,
     )
     last_50_job_run_dates = [job_run["StartedOn"] for job_run in response["JobRuns"]]
-    job_run_daily_count = sum(1 if job_run_date.date() == today else 0 for job_run_date in last_50_job_run_dates)
+    job_run_daily_count = sum(
+        1 if job_run_date.date() == today else 0
+        for job_run_date in last_50_job_run_dates
+    )
 
-    logger.info(f"Number of daily runs for job with name of '{job_name}' is '{job_run_daily_count}")
+    logger.info(
+        f"Number of daily runs for job with name of '{job_name}' is '{job_run_daily_count}"
+    )
 
     return job_run_daily_count
 
@@ -695,7 +700,9 @@ def handler(event, context):
     if daily_run_count < int(args.max_daily_runs):
         execute_manifest_glue_job(
             args.etl_glue_job_name,
-            generate_ms_epoch_from_timestamp(args.manifest_comparison_cut_off_date_start),
+            generate_ms_epoch_from_timestamp(
+                args.manifest_comparison_cut_off_date_start
+            ),
             generate_ms_epoch_from_timestamp(args.manifest_comparison_cut_off_date_end),
             generate_ms_epoch_from_timestamp(
                 args.manifest_comparison_cut_off_date_end,
@@ -709,7 +716,9 @@ def handler(event, context):
         )
         logger.info("Launched Glue Job - exiting")
     else:
-        logger.info(f"Not launching Glue Job as current daily run count ('{daily_run_count}') is at or above max run count ('{args.max_daily_runs}')")
+        logger.info(
+            f"Not launching Glue Job as current daily run count ('{daily_run_count}') is at or above max run count ('{args.max_daily_runs}')"
+        )
 
 
 if __name__ == "__main__":

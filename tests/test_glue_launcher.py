@@ -5,7 +5,7 @@ import argparse
 import logging
 import os
 import unittest
-from datetime import datetime
+from datetime import datetime, timedelta
 from unittest import mock
 from unittest.mock import call, MagicMock
 
@@ -59,6 +59,8 @@ args.manifest_s3_output_location = "s3://bucket/output_location"
 args.manifest_s3_bucket = "bucket"
 args.manifest_s3_prefix = "output_location"
 args.manifest_deletion_prefixes = ["queries", "templates", "results"]
+args.max_daily_runs = 3
+args.manifest_parquet_s3_base_location = ""
 
 
 class TestRetriever(unittest.TestCase):
@@ -362,6 +364,49 @@ class TestRetriever(unittest.TestCase):
             },
         )
 
+    @mock.patch("glue_launcher_lambda.glue_launcher.get_glue_client")
+    @mock.patch("glue_launcher_lambda.glue_launcher.logger")
+    def test_get_daily_run_count(self, mock_logger, glue_client_mock):
+        today = datetime.now()
+        yesterday = today + timedelta(days=-1)
+
+        glue_client_mock.get_job_runs = MagicMock()
+        glue_client_mock.get_job_runs.return_value = {"JobRuns": [ {"StartedOn": today},{"StartedOn": yesterday}]}
+
+        expected = 1
+        actual = glue_launcher.get_daily_run_count(
+            ETL_GLUE_JOB_NAME,
+            glue_client=glue_client_mock,
+            today=today.date(),
+        )
+
+        glue_client_mock.get_job_runs.assert_called_once_with(
+            JobName=ETL_GLUE_JOB_NAME,
+        )
+
+        assert expected == actual
+
+    @mock.patch("glue_launcher_lambda.glue_launcher.get_glue_client")
+    @mock.patch("glue_launcher_lambda.glue_launcher.logger")
+    def test_get_daily_run_count_with_no_runs(self, mock_logger, glue_client_mock):
+        today = datetime.now()
+
+        glue_client_mock.get_job_runs = MagicMock()
+        glue_client_mock.get_job_runs.return_value = {"JobRuns": []}
+
+        expected = 0
+        actual = glue_launcher.get_daily_run_count(
+            ETL_GLUE_JOB_NAME,
+            glue_client=glue_client_mock,
+            today=today.date(),
+        )
+
+        glue_client_mock.get_job_runs.assert_called_once_with(
+            JobName=ETL_GLUE_JOB_NAME,
+        )
+
+        assert expected == actual
+
     @mock.patch("glue_launcher_lambda.glue_launcher.poll_athena_query_status")
     @mock.patch("glue_launcher_lambda.glue_launcher.get_athena_client")
     @mock.patch("glue_launcher_lambda.glue_launcher.get_parameters")
@@ -592,6 +637,7 @@ class TestRetriever(unittest.TestCase):
     @mock.patch("glue_launcher_lambda.glue_launcher.clear_manifest_output")
     @mock.patch("glue_launcher_lambda.glue_launcher.generate_ms_epoch_from_timestamp")
     @mock.patch("glue_launcher_lambda.glue_launcher.execute_manifest_glue_job")
+    @mock.patch("glue_launcher_lambda.glue_launcher.get_daily_run_count")
     @mock.patch("glue_launcher_lambda.glue_launcher.recreate_sql_tables")
     @mock.patch("glue_launcher_lambda.glue_launcher.fetch_table_drop_sql_file")
     @mock.patch("glue_launcher_lambda.glue_launcher.fetch_table_creation_sql_files")
@@ -618,6 +664,7 @@ class TestRetriever(unittest.TestCase):
         fetch_sql,
         drop_sql,
         recreate_tables,
+        get_daily_run_count_mock,
         execute_glue,
         epoch_mock,
         clear_output_mock,
@@ -636,6 +683,8 @@ class TestRetriever(unittest.TestCase):
             "status": "SUCCEEDED",
             "jobQueue": "testqueue",
         }
+
+        get_daily_run_count_mock.return_value = 0
 
         running_batch_tasks.side_effect = [0, 0]
 
@@ -672,12 +721,17 @@ class TestRetriever(unittest.TestCase):
         epoch_mock.assert_has_calls(epoch_mock_calls)
         assert epoch_mock.call_count == len(epoch_mock_calls)
 
-        fetch_sql.assert_called_with("sql", parameters_mock.return_value)
-        drop_sql.assert_called_with("sql", parameters_mock.return_value)
-        recreate_tables.assert_called_with(
+        fetch_sql.assert_called_once_with("sql", parameters_mock.return_value)
+        drop_sql.assert_called_once_with("sql", parameters_mock.return_value)
+        recreate_tables.assert_called_once_with(
             ["tables"], ["drop"], athena_mock.return_value
         )
-        execute_glue.assert_called_with(
+        get_daily_run_count_mock.assert_called_once_with(
+            "job",
+            glue_mock.return_value,
+            datetime.today().date(),
+        )
+        execute_glue.assert_called_once_with(
             "jobName",
             "12345",
             "23456",
@@ -692,6 +746,7 @@ class TestRetriever(unittest.TestCase):
     @mock.patch("glue_launcher_lambda.glue_launcher.clear_manifest_output")
     @mock.patch("glue_launcher_lambda.glue_launcher.generate_ms_epoch_from_timestamp")
     @mock.patch("glue_launcher_lambda.glue_launcher.execute_manifest_glue_job")
+    @mock.patch("glue_launcher_lambda.glue_launcher.get_daily_run_count")
     @mock.patch("glue_launcher_lambda.glue_launcher.recreate_sql_tables")
     @mock.patch("glue_launcher_lambda.glue_launcher.fetch_table_drop_sql_file")
     @mock.patch("glue_launcher_lambda.glue_launcher.fetch_table_creation_sql_files")
@@ -718,6 +773,7 @@ class TestRetriever(unittest.TestCase):
         fetch_sql,
         drop_sql,
         recreate_tables,
+        get_daily_run_count_mock,
         execute_glue,
         epoch_mock,
         clear_output_mock,
@@ -746,6 +802,8 @@ class TestRetriever(unittest.TestCase):
         ]
         epoch_mock.side_effect = ["12345", "23456", "23458"]
 
+        get_daily_run_count_mock.return_value = 2
+
         glue_launcher.handler(event, None)
 
         clear_output_mock.assert_has_calls(
@@ -761,12 +819,17 @@ class TestRetriever(unittest.TestCase):
         epoch_mock.assert_has_calls(epoch_mock_calls)
         assert epoch_mock.call_count == len(epoch_mock_calls)
 
-        fetch_sql.assert_called_with("sql", parameters_mock.return_value)
-        drop_sql.assert_called_with("sql", parameters_mock.return_value)
-        recreate_tables.assert_called_with(
+        fetch_sql.assert_called_once_with("sql", parameters_mock.return_value)
+        drop_sql.assert_called_once_with("sql", parameters_mock.return_value)
+        recreate_tables.assert_called_once_with(
             ["tables"], ["drop"], athena_mock.return_value
         )
-        execute_glue.assert_called_with(
+        get_daily_run_count_mock.assert_called_once_with(
+            "job",
+            glue_mock.return_value,
+            datetime.today().date(),
+        )
+        execute_glue.assert_called_once_with(
             "jobName",
             "12345",
             "23456",
@@ -777,6 +840,85 @@ class TestRetriever(unittest.TestCase):
             "/export",
             glue_mock.return_value,
         )
+
+    @mock.patch("glue_launcher_lambda.glue_launcher.clear_manifest_output")
+    @mock.patch("glue_launcher_lambda.glue_launcher.generate_ms_epoch_from_timestamp")
+    @mock.patch("glue_launcher_lambda.glue_launcher.execute_manifest_glue_job")
+    @mock.patch("glue_launcher_lambda.glue_launcher.get_daily_run_count")
+    @mock.patch("glue_launcher_lambda.glue_launcher.recreate_sql_tables")
+    @mock.patch("glue_launcher_lambda.glue_launcher.fetch_table_drop_sql_file")
+    @mock.patch("glue_launcher_lambda.glue_launcher.fetch_table_creation_sql_files")
+    @mock.patch("glue_launcher_lambda.glue_launcher.check_running_batch_tasks")
+    @mock.patch("glue_launcher_lambda.glue_launcher.get_glue_client")
+    @mock.patch("glue_launcher_lambda.glue_launcher.get_athena_client")
+    @mock.patch("glue_launcher_lambda.glue_launcher.get_batch_client")
+    @mock.patch("glue_launcher_lambda.glue_launcher.get_and_validate_job_details")
+    @mock.patch("glue_launcher_lambda.glue_launcher.get_escaped_json_string")
+    @mock.patch("glue_launcher_lambda.glue_launcher.logger")
+    @mock.patch("glue_launcher_lambda.glue_launcher.setup_logging")
+    @mock.patch("glue_launcher_lambda.glue_launcher.get_parameters")
+    def test_handler_above_max_daily_run_count(
+        self,
+        parameters_mock,
+        setup_logging,
+        logger,
+        dumped_event,
+        job_details_validator,
+        batch_client_mock,
+        athena_mock,
+        glue_mock,
+        running_batch_tasks,
+        fetch_sql,
+        drop_sql,
+        recreate_tables,
+        get_daily_run_count_mock,
+        execute_glue,
+        epoch_mock,
+        clear_output_mock,
+    ):
+        athena_mock.return_value = MagicMock()
+        glue_mock.return_value = MagicMock()
+
+        parameters_mock.return_value = args
+        dumped_event.return_value = "{}"
+        job_details_validator.return_value = {
+            "jobName": "job",
+            "status": "SUCCEEDED",
+            "jobQueue": "testqueue",
+            "ignoreBatchChecks": "true",
+        }
+
+        event = {"event": "details"}
+
+        fetch_sql.return_value = ["tables"]
+        drop_sql.return_value = ["drop"]
+
+        get_daily_run_count_mock.return_value = 3
+
+        glue_launcher.handler(event, None)
+
+        clear_output_mock.assert_has_calls(
+            [
+                call("bucket", "output_location/queries"),
+                call("bucket", "output_location/templates"),
+                call("bucket", "output_location/results"),
+            ]
+        )
+
+        running_batch_tasks.assert_not_called()
+
+        fetch_sql.assert_called_once_with("sql", parameters_mock.return_value)
+        drop_sql.assert_called_once_with("sql", parameters_mock.return_value)
+        recreate_tables.assert_called_once_with(
+            ["tables"], ["drop"], athena_mock.return_value
+        )
+        get_daily_run_count_mock.assert_called_once_with(
+            "job",
+            glue_mock.return_value,
+            datetime.today().date(),
+        )
+        execute_glue.assert_not_called()
+        epoch_mock.assert_not_called()
 
     @mock_s3
     def test_clear_manifest_output_over_1000(self):

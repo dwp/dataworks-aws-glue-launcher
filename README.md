@@ -41,6 +41,7 @@ Then the lambda will start the AWS Glue job with its required parameters.
 |MANIFEST_S3_INPUT_PARQUET_LOCATION_COUNTS | Full S3 URI to counts output location |
 |MANIFEST_S3_INPUT_PARQUET_LOCATION_MISMATCHED_TIMESTAMPS | Full S3 URI to mismatched timestamps output location |
 |MANIFEST_S3_OUTPUT_LOCATION | Output location on S3 for Athena query outputs |
+|MAX_DAILY_RUNS | Will not start the glue job is current daily run count is equal to or above this number (defaults to 5) |
 
 # Batch checks override
 

@@ -692,7 +692,7 @@ def handler(event, context):
     glue_client = get_glue_client()
 
     daily_run_count = get_daily_run_count(
-        job_name,
+        args.etl_glue_job_name,
         glue_client,
         datetime.today().date(),
     )

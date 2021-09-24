@@ -729,7 +729,7 @@ class TestRetriever(unittest.TestCase):
             ["tables"], ["drop"], athena_mock.return_value
         )
         get_daily_run_count_mock.assert_called_once_with(
-            "job",
+            "jobName",
             glue_mock.return_value,
             datetime.today().date(),
         )
@@ -827,7 +827,7 @@ class TestRetriever(unittest.TestCase):
             ["tables"], ["drop"], athena_mock.return_value
         )
         get_daily_run_count_mock.assert_called_once_with(
-            "job",
+            "jobName",
             glue_mock.return_value,
             datetime.today().date(),
         )
@@ -915,7 +915,7 @@ class TestRetriever(unittest.TestCase):
             ["tables"], ["drop"], athena_mock.return_value
         )
         get_daily_run_count_mock.assert_called_once_with(
-            "job",
+            "jobName",
             glue_mock.return_value,
             datetime.today().date(),
         )

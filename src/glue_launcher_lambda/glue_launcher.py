@@ -368,7 +368,6 @@ def clear_manifest_output(bucket, prefix):
     pages = paginator.paginate(Bucket=bucket, Prefix=prefix)
 
     if does_s3_key_exist(pages):
-
         key_to_delete = dict(Objects=[], Quiet=True)
         for item in pages.search("Contents"):
             key_to_delete["Objects"].append(dict(Key=item["Key"]))

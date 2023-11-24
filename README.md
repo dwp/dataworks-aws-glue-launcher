@@ -1,3 +1,5 @@
+# DO NOT USE THIS REPO - MIGRATED TO GITLAB
+
 # dataworks-aws-glue-launcher
 
 ## A Lambda which prepares and starts AWS Glue jobs once dependencies are met.
